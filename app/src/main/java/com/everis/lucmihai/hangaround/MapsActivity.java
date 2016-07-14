@@ -1,38 +1,38 @@
 package com.everis.lucmihai.hangaround;
 
+import android.content.Context;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
+    SupportMapFragment mapFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+        mapFragment= (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-            mMap.setMyLocationEnabled(true);
-        } else {
-            // Show rationale and request permission.
-        }
-
-
     }
 
 
@@ -49,10 +49,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
-        // Add a marker in Sydney and move the camera
+        /*// Add a marker in Sydney and move the camera
         LatLng sydney = new LatLng(-34, 151);
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        */
+        Context context = getApplicationContext();
+
+        final LocationManager locationManager = (LocationManager)
+                getSystemService(Context.LOCATION_SERVICE);
+        Criteria criteria = new Criteria();
+        try {
+            final Location location = locationManager.getLastKnownLocation(locationManager.getBestProvider(criteria, false));
+            final double latitude = location.getLatitude();
+            final double longitude = location.getLongitude();
+            String stringll = String.valueOf(latitude);
+            stringll += "  ";
+            stringll += String.valueOf(longitude);
+            int duration = Toast.LENGTH_LONG;
+            Toast toast = Toast.makeText(context, stringll, duration);
+            toast.show();
+
+            final LatLng myLoc = new LatLng(latitude,longitude);
+            mMap.addMarker(new MarkerOptions().position(myLoc).title("You are here"));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLoc,15f));
+            /*mMap.setMyLocationEnabled(true);
+            mMap.animateCamera( CameraUpdateFactory.zoomTo( 57.0f ) );
+            mMap.getUiSettings().setMyLocationButtonEnabled(true);
+*/
+        }
+        catch (SecurityException e){
+            e.printStackTrace();
+        }
     }
 }
