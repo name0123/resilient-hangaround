@@ -1,8 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-android:orientation="vertical" android:layout_width="match_parent"
-android:layout_height="match_parent"
-    android:gravity="center">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:theme="@style/Theme.AppCompat.NoActionBar">
+
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/search_bar"
+        android:icon="@android:drawable/ic_menu_search"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+        app:popupTheme="@style/ThemeOverlay.AppCompat"
+        app:showAsAction="always"
+        app:actionViewClass="android.support.v7.widget.SearchView">
+     <LinearLayout
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+         >
+         <EditText
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             android:id="@+id/searchContent"
+             android:layout_weight="100"
+             />
+         <Button
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_weight="4"
+             android:text="Search"
+
+             />
+
+     </LinearLayout>
+
+    </android.support.v7.widget.Toolbar>
+
+
 
     <fragment xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:map="http://schemas.android.com/apk/res-auto"
@@ -10,7 +46,7 @@ android:layout_height="match_parent"
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         tools:context="com.everis.lucmihai.hangaround.MapsActivity"
         android:layout_weight="17"/>
 
