@@ -1,6 +1,7 @@
 package com.everis.lucmihai.hangaround;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
@@ -19,9 +20,8 @@ public class LoginActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-
-
     }
+
     @OnClick(R.id.bcontinue)
     public void onClickContinue(View view){
         Intent intent = new Intent(this, MapsActivity.class);
