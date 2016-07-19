@@ -30,6 +30,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
     SupportMapFragment mapFragment;
     Geocoder geocoder;
     Context context;
+    private static final String TAG = "MapActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +70,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
     public void showPlaces(Location location, IntegrationPoint.XPlaces xplaces, IntegrationPoint.Timeout timeout){
         // IP - integration point: arq needed
         IntegrationPointImpl ip = new IntegrationPointImpl();
-        ip.getXPlacesAroundLocation(context,location, xplaces, timeout);
+        ip.getXPlacesAroundLocation(location, xplaces, timeout);
 
     }
     @Override

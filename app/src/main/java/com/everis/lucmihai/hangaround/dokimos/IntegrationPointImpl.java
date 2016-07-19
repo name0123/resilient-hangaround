@@ -1,6 +1,5 @@
 package com.everis.lucmihai.hangaround.dokimos;
 
-import android.content.Context;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.util.Log;
@@ -20,7 +19,7 @@ public class IntegrationPointImpl implements IntegrationPoint {
     public IntegrationPointImpl() {}
     private static final String TAG = "Dokimos";
     @Override
-    public void getXPlacesAroundLocation(Context context, Location location, XPlaces x, Timeout timeout) {
+    public void getXPlacesAroundLocation(Location location, XPlaces x, Timeout timeout) {
         long millis = System.currentTimeMillis() % 1000;
         // parameters needed ?ll=lat,lon and limit is = x
 
