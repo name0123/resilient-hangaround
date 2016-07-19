@@ -1,35 +1,24 @@
 package com.everis.lucmihai.hangaround;
 
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.ActionBarActivity;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.widget.EditText;
-import android.widget.Toast;
 
-import com.google.android.gms.identity.intents.Address;
-import com.google.android.gms.maps.CameraUpdate;
+import com.everis.lucmihai.hangaround.dokimos.IntegrationPoint;
+import com.everis.lucmihai.hangaround.dokimos.IntegrationPointImpl;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
+
 import java.util.List;
 
 import butterknife.OnClick;
@@ -46,6 +35,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+        context = getApplicationContext();
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mapFragment= (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
@@ -73,8 +63,14 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLoc,15f));
             /*mMap.setMyLocationEnabled(true);
             mMap.animateCamera( CameraUpdateFactory.zoomTo( 57.0f ) );
-            mMap.getUiSettings().setMyLocationButtonEnabled(true);
+
 */
+    }
+    public void showPlaces(Location location, IntegrationPoint.XPlaces xplaces, IntegrationPoint.Timeout timeout){
+        // IP - integration point: arq needed
+        IntegrationPointImpl ip = new IntegrationPointImpl();
+        ip.getXPlacesAroundLocation(context,location, xplaces, timeout);
+
     }
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -85,7 +81,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
         */
         context = getApplicationContext();
-
+        mMap.getUiSettings().setMyLocationButtonEnabled(true); // no work!
         final LocationManager locationManager = (LocationManager)
                 getSystemService(Context.LOCATION_SERVICE);
 
@@ -93,15 +89,22 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
         Criteria criteria = new Criteria();
         try {
             final Location location = locationManager.getLastKnownLocation(locationManager.getBestProvider(criteria, false));
-            final double latitude = location.getLatitude();
-            final double longitude = location.getLongitude();
-            String stringll = String.valueOf(latitude);
-            stringll += "  ";
-            stringll += String.valueOf(longitude);
-            toast(stringll);
+            if(location != null){
+                final Double latitude = location.getLatitude();
+                final Double longitude = location.getLongitude();
 
-            goThere(latitude,longitude, "you are here");
-
+                String stringll = String.valueOf(latitude);
+                stringll += "  ";
+                stringll += String.valueOf(longitude);
+                toast(stringll);
+                goThere(latitude, longitude, "you are here");
+                IntegrationPoint.XPlaces xPlaces = new IntegrationPoint.XPlaces(10);
+                IntegrationPoint.Timeout timeout = new IntegrationPoint.Timeout(100);
+                showPlaces(location, xPlaces, timeout);
+            }
+            else{
+                toast("temp: location is null");
+            }
         }
         catch (SecurityException e){
             e.printStackTrace();
