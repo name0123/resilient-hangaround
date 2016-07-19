@@ -18,8 +18,18 @@ import java.net.URL;
 public class IntegrationPointImpl implements IntegrationPoint {
     public IntegrationPointImpl() {}
     private static final String TAG = "Dokimos";
+
+    public void setxPlaces(JSONArray xPlaces) {
+        this.xPlaces = xPlaces;
+    }
+
+    public JSONArray getxPlaces() {
+        return xPlaces;
+    }
+
+    private JSONArray xPlaces = null;
     @Override
-    public void getXPlacesAroundLocation(Location location, XPlaces x, Timeout timeout) {
+    public JSONArray getXPlacesAroundLocation(Location location, XPlaces x, Timeout timeout) {
         long millis = System.currentTimeMillis() % 1000;
         // parameters needed ?ll=lat,lon and limit is = x
 
@@ -30,7 +40,11 @@ public class IntegrationPointImpl implements IntegrationPoint {
             e.printStackTrace();
         }
         DownloadPlaces dp = new DownloadPlaces();
-        dp.execute(url);
+        AsyncTask asyncTask =null;
+        asyncTask = dp.execute(url);
+        // waiting for the end... xd
+        while (asyncTask == null);
+        return xPlaces;
 
     }
     private class DownloadPlaces extends AsyncTask<URL, Integer, JSONArray>{
@@ -44,35 +58,31 @@ public class IntegrationPointImpl implements IntegrationPoint {
                 HttpURLConnection conn = (HttpURLConnection) params[0].openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Accept", "application/json");
-
+                // five seconds time out for this connection
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
                 if (conn.getResponseCode() != 200) {
-                    Log.d(TAG, (String)"mishoo noo" + conn.getResponseCode());
+                    Log.d(TAG, (String)"Errores:" + conn.getResponseCode());
 
                 } else {
+                    // responseCode = 200!
                     String line;
                     StringBuilder sb = new StringBuilder();
                     BufferedReader rd = new BufferedReader(new InputStreamReader(
                             (conn.getInputStream())));
-
-                   try {
+                    try {
                        while ((line = rd.readLine()) != null) {
                            sb.append(line);
                        }
                        rd.close();
 
-
-                        } catch (Exception e) {
+                    }catch (Exception e) {
                         return null;
                     }
                     JSONArray json = new JSONArray(sb.toString());
-                    //JSONObject json = new JSONObject(sb.toString());
                     conn.disconnect();
                     return json;
-
-
                 }
-
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -88,10 +98,11 @@ public class IntegrationPointImpl implements IntegrationPoint {
         protected void onPostExecute(JSONArray result) {
             //do the job after the request
             if(result != null) {
-                Log.d(TAG,"hurray dude-- downloaded succsesfully");
-                Log.d(TAG,String.valueOf(result.length()));
+                /*Log.d(TAG,"hurray dude-- downloaded succsesfully");
+                Log.d(TAG,String.valueOf(result.length()));*/
+                setxPlaces(result);
             }
-            else Log.d(TAG,"hahahaha");
+            else Log.d(TAG,"vacio");
         }
     }
 

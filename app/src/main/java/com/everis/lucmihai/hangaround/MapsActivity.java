@@ -7,6 +7,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 
@@ -18,6 +19,8 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+
+import org.json.JSONArray;
 
 import java.util.List;
 
@@ -70,7 +73,10 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
     public void showPlaces(Location location, IntegrationPoint.XPlaces xplaces, IntegrationPoint.Timeout timeout){
         // IP - integration point: arq needed
         IntegrationPointImpl ip = new IntegrationPointImpl();
-        ip.getXPlacesAroundLocation(location, xplaces, timeout);
+        JSONArray placesAroundLocation = ip.getXPlacesAroundLocation(location, xplaces, timeout);
+        //JSONObject place = (JSONObject) placesAroundLocation.get(0);
+       if(placesAroundLocation != null) Log.d(TAG, placesAroundLocation.toString());
+        else Log.d(TAG, "nothing here yet!");
 
     }
     @Override
