@@ -29,7 +29,7 @@ public class IntegrationPointImpl implements IntegrationPoint {
 
     private JSONArray xPlaces = null;
     @Override
-    public JSONArray getXPlacesAroundLocation(Location location, XPlaces x, Timeout timeout) {
+    public void getXPlacesAroundLocation(Location location, XPlaces x, Timeout timeout) {
         long millis = System.currentTimeMillis() % 1000;
         // parameters needed ?ll=lat,lon and limit is = x
 
@@ -40,12 +40,9 @@ public class IntegrationPointImpl implements IntegrationPoint {
             e.printStackTrace();
         }
         DownloadPlaces dp = new DownloadPlaces();
-        AsyncTask asyncTask =null;
-        asyncTask = dp.execute(url);
-        // waiting for the end... xd
-        while (asyncTask == null);
-        return xPlaces;
+        dp.execute(url);
 
+        Log.d(TAG,dp.getStatus().toString());
     }
     private class DownloadPlaces extends AsyncTask<URL, Integer, JSONArray>{
 
@@ -59,8 +56,8 @@ public class IntegrationPointImpl implements IntegrationPoint {
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Accept", "application/json");
                 // five seconds time out for this connection
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
+                //conn.setConnectTimeout(5000);
+                //conn.setReadTimeout(5000);
                 if (conn.getResponseCode() != 200) {
                     Log.d(TAG, (String)"Errores:" + conn.getResponseCode());
 
@@ -80,7 +77,7 @@ public class IntegrationPointImpl implements IntegrationPoint {
                         return null;
                     }
                     JSONArray json = new JSONArray(sb.toString());
-                    conn.disconnect();
+                    publishProgress();
                     return json;
                 }
             } catch (Exception e) {
@@ -100,6 +97,7 @@ public class IntegrationPointImpl implements IntegrationPoint {
             if(result != null) {
                 /*Log.d(TAG,"hurray dude-- downloaded succsesfully");
                 Log.d(TAG,String.valueOf(result.length()));*/
+
                 setxPlaces(result);
             }
             else Log.d(TAG,"vacio");

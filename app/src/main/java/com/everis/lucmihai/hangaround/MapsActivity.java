@@ -7,7 +7,6 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 
@@ -70,14 +69,10 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
 
 */
     }
-    public void showPlaces(Location location, IntegrationPoint.XPlaces xplaces, IntegrationPoint.Timeout timeout){
+    public void getPlaces(Location location, IntegrationPoint.XPlaces xplaces, IntegrationPoint.Timeout timeout){
         // IP - integration point: arq needed
         IntegrationPointImpl ip = new IntegrationPointImpl();
-        JSONArray placesAroundLocation = ip.getXPlacesAroundLocation(location, xplaces, timeout);
-        //JSONObject place = (JSONObject) placesAroundLocation.get(0);
-       if(placesAroundLocation != null) Log.d(TAG, placesAroundLocation.toString());
-        else Log.d(TAG, "nothing here yet!");
-
+        ip.getXPlacesAroundLocation(location, xplaces, timeout);
     }
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -88,9 +83,10 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
         */
         context = getApplicationContext();
-        mMap.getUiSettings().setMyLocationButtonEnabled(true); // no work!
+        //mMap.getUiSettings().setMyLocationButtonEnabled(true); // no work!
         final LocationManager locationManager = (LocationManager)
                 getSystemService(Context.LOCATION_SERVICE);
+
 
 
         Criteria criteria = new Criteria();
@@ -107,10 +103,11 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
                 goThere(latitude, longitude, "you are here");
                 IntegrationPoint.XPlaces xPlaces = new IntegrationPoint.XPlaces(10);
                 IntegrationPoint.Timeout timeout = new IntegrationPoint.Timeout(100);
-                showPlaces(location, xPlaces, timeout);
+                getPlaces(location, xPlaces, timeout);
             }
             else{
-                toast("temp: location is null");
+                toast("No current location, turn on GPS");
+                //showAlertDialog(@StringRes)
             }
         }
         catch (SecurityException e){
@@ -125,30 +122,21 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
         EditText searchedText = (EditText) findViewById(R.id.txtsearch);
         String searchedLocation = searchedText.getText().toString();
         try {
-           //Address address = (Address) geocoder.getFromLocationName(searchedLocation,1);
-            // toast here searchedLocation
-
-            toast(searchedLocation);
-
+           //Address address = (Address) geocoder.getFromLocationName(searchedLocation,1); cool
             geocoder = new Geocoder(this);
             List<android.location.Address> addresses = geocoder.getFromLocationName(searchedLocation,1);
             if(addresses.size() > 0) {
                 double latitude= addresses.get(0).getLatitude();
                 double longitude= addresses.get(0).getLongitude();
-                String s = String.valueOf(latitude);
-                // toast here string s
-                //toast(s);
-                toast("hello");
                 goThere(latitude,longitude, searchedLocation);
             }
-            else{
-                toast("bye hello");            }
-
-
         }
         catch(Exception e){
             e.printStackTrace();
         }
 
+    }
+    public void showPlaces(JSONArray places){
+        if (places != null) toast(places.length());
     }
 }

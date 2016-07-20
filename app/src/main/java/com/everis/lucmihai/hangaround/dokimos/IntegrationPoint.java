@@ -2,13 +2,11 @@ package com.everis.lucmihai.hangaround.dokimos;
 
 import android.location.Location;
 
-import org.json.JSONArray;
-
 /**
  * Created by John on 7/19/2016.
  */
 public interface IntegrationPoint extends Dokimos {
-    public JSONArray getXPlacesAroundLocation(Location location, XPlaces x, Timeout timeout);
+    public void getXPlacesAroundLocation(Location location, XPlaces x, Timeout timeout);
 
     class XPlaces {
         int xplaces;

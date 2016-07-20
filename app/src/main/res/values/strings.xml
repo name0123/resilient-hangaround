@@ -8,4 +8,5 @@
     <string name="guesttext">Continue as guest</string>
     <string name="search_hint">Search Places</string>
     <string name="search_settings">Search Places</string>
+    <string name="turnOnLocationMessage">Please turn on your GPS</string>
 </resources>
