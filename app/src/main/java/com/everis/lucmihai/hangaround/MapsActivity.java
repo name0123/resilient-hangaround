@@ -5,34 +5,53 @@ import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 
 import com.everis.lucmihai.hangaround.dokimos.IntegrationPoint;
-import com.everis.lucmihai.hangaround.dokimos.IntegrationPointImpl;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 
 import butterknife.OnClick;
 import stanford.androidlib.SimpleActivity;
 
-public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
+public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private GoogleMap mMap;
     SupportMapFragment mapFragment;
     Geocoder geocoder;
     Context context;
     private static final String TAG = "MapActivity";
+    private final Float CTOTAL = BitmapDescriptorFactory.HUE_GREEN;
+    private final Float CPARTIAL = BitmapDescriptorFactory.HUE_YELLOW;
+    private final Float CUNADAPTED = BitmapDescriptorFactory.HUE_AZURE;
+    private final Float CUNKNOWN = BitmapDescriptorFactory.HUE_CYAN;
+
+    private final String SUNKNOWN = "UNKNOWN";
+    private final String SUNADAPTED = "UNADAPTED";
+    private final String SPARTIAL = "PARTIAL";
+    private final String STOTAL = "TOTAL";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,8 +67,6 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
         setSupportActionBar(toolbar);
 
     }
-
-
 
     /**
      * Manipulates the map once available.
@@ -70,10 +87,71 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
 */
     }
     public void getPlaces(Location location, IntegrationPoint.XPlaces xplaces, IntegrationPoint.Timeout timeout){
-        // IP - integration point: arq needed
-        IntegrationPointImpl ip = new IntegrationPointImpl();
-        ip.getXPlacesAroundLocation(location, xplaces, timeout);
+        URL url1 = null;
+        try {
+            //url1 = new URL("https://movibit.herokuapp.com/4square/search?ll=41.3830878006894,2.04654693603516&limit=50");
+            //url1 = new URL("https://movibit.herokuapp.com/places/get?ll=41.3830878006894,2.04654693603516");
+            url1 = new URL("https://movibit.herokuapp.com/places/getall");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        new getPlaces().execute(url1);
     }
+
+    @Override
+    public boolean onMarkerClick(Marker marker) {
+        return false;
+    }
+
+    private class getPlaces extends AsyncTask<URL, Integer, JSONArray> {
+        protected JSONArray doInBackground(URL... urls) {
+            try {
+                HttpURLConnection conn = (HttpURLConnection) urls[0].openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                // five seconds time out for this connection
+                //conn.setConnectTimeout(5000);
+                //conn.setReadTimeout(5000);
+                if (conn.getResponseCode() != 200) {
+                    Log.d(TAG, (String)"Errores:" + conn.getResponseCode());
+
+                } else {
+                    // responseCode = 200!
+                    String line;
+                    StringBuilder sb = new StringBuilder();
+                    BufferedReader rd = new BufferedReader(new InputStreamReader(
+                            (conn.getInputStream())));
+                    try {
+                        while ((line = rd.readLine()) != null) {
+                            Log.d(TAG,line);
+                            sb.append(line);
+                        }
+                        rd.close();
+
+                    }catch (Exception e) {
+                        return null;
+                    }
+                    JSONArray json = new JSONArray(sb.toString());
+                    publishProgress();
+                    return json;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+
+        protected void onPostExecute(JSONArray result) {
+            if(result != null) {
+               showPlaces(result);
+            }
+            else{
+                // no places found
+            }
+        }
+    }
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
@@ -86,7 +164,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
         //mMap.getUiSettings().setMyLocationButtonEnabled(true); // no work!
         final LocationManager locationManager = (LocationManager)
                 getSystemService(Context.LOCATION_SERVICE);
-
+        mMap.setOnMarkerClickListener(this);
 
 
         Criteria criteria = new Criteria();
@@ -137,6 +215,82 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback {
 
     }
     public void showPlaces(JSONArray places){
-        if (places != null) toast(places.length());
+        // returned the
+        toast(places.length());
+        try {
+            JSONObject place = (JSONObject) places.get(0);
+            //Log.d(TAG,place.toString());
+            double lat = ((JSONObject) places.get(0)).getDouble("latitude");
+            double lng = ((JSONObject) places.get(0)).getDouble("longitude");
+            String mark = ((JSONObject) places.get(0)).getString("name");
+            // place the camera on [0] - might need zoom
+            goThere(lat,lng,mark);
+            showMarker(place);
+            // display
+            for(int i = 1; i < places.length(); ++i){
+                place = (JSONObject)places.get(i);
+                showMarker(place);
+                if(place.getString("category").equals("Food") ||
+                        place.getString("category").equals("Bar") ||
+                        place.getString("category").equals("Coffee Shop") ||
+                        place.getString("category").equals("Restaurant")){
+                }
+
+            }
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showMarker(JSONObject place) {
+        double lat = 0.0;
+        double lng = 0.0;
+        String adaptationLevel ="";
+        String placeName="";
+        try {
+            lat = place.getDouble("latitude");
+            lng = place.getDouble("longitude");
+            adaptationLevel = place.getString("adaptedLevel");
+            placeName = place.getString("name");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        /*enum AdaptedLevel {
+            UNKNOWN, UNADAPTED, PARTIAL, TOTAL
+        }*/
+
+        LatLng placeLocation = new LatLng(lat, lng);
+
+        if(adaptationLevel.equals(SUNKNOWN)){
+            Marker placeMarker = mMap.addMarker(new MarkerOptions()
+                    .position(placeLocation)
+                    .icon(BitmapDescriptorFactory.defaultMarker(CUNKNOWN))
+                    .title(placeName)
+            );
+        }
+
+        else if(adaptationLevel.equals(STOTAL)) {
+            Marker placeMarker = mMap.addMarker(new MarkerOptions()
+                    .position(placeLocation)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    .title(placeName)
+            );
+        }
+        else if(adaptationLevel.equals(SPARTIAL)) {
+            Marker placeMarker = mMap.addMarker(new MarkerOptions()
+                    .position(placeLocation)
+                    .icon(BitmapDescriptorFactory.defaultMarker(CPARTIAL))
+                    .title(placeName)
+            );
+        }
+        else if(adaptationLevel.equals(SUNADAPTED)) {
+            Marker placeMarker = mMap.addMarker(new MarkerOptions()
+                    .position(placeLocation)
+                    .icon(BitmapDescriptorFactory.defaultMarker(CUNADAPTED))
+                    .title(placeName)
+            );
+        }
     }
 }
