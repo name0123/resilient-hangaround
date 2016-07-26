@@ -4,7 +4,8 @@
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:theme="@style/Theme.AppCompat.NoActionBar">
+    android:theme="@style/Theme.AppCompat.NoActionBar"
+    >
 
     <android.support.v7.widget.Toolbar
         android:id="@+id/search_bar"
@@ -30,12 +31,21 @@
          <Button
              android:id="@+id/bsearch"
              android:layout_width="wrap_content"
-             android:layout_height="wrap_content"
+             android:layout_height="match_parent"
              android:onClick="onClickSearch"
              android:text="Search"
 
              />
+         <Button
+             android:id="@+id/blogin"
+             android:layout_width="wrap_content"
+             android:layout_height="match_parent"
+             android:backgroundTint="@color/colorPrimary"
+             android:onClick="onClickLogin"
+             android:textSize="10dp"
+             android:text="Welcome \nGuest"
 
+             />
      </LinearLayout>
 
     </android.support.v7.widget.Toolbar>

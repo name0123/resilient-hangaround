@@ -95,15 +95,16 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
-        new getPlaces().execute(url1);
+        new getPlacesBackgound().execute(url1);
     }
 
     @Override
     public boolean onMarkerClick(Marker marker) {
+
         return false;
     }
 
-    private class getPlaces extends AsyncTask<URL, Integer, JSONArray> {
+    private class getPlacesBackgound extends AsyncTask<URL, Integer, JSONArray> {
         protected JSONArray doInBackground(URL... urls) {
             try {
                 HttpURLConnection conn = (HttpURLConnection) urls[0].openConnection();
@@ -161,7 +162,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
         */
         context = getApplicationContext();
-        //mMap.getUiSettings().setMyLocationButtonEnabled(true); // no work!
+        mMap.getUiSettings().setMyLocationButtonEnabled(true); // no work!
         final LocationManager locationManager = (LocationManager)
                 getSystemService(Context.LOCATION_SERVICE);
         mMap.setOnMarkerClickListener(this);
