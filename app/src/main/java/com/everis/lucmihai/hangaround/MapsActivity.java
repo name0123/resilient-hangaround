@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.everis.lucmihai.hangaround.dokimos.IntegrationPoint;
+import com.everis.lucmihai.hangaround.dokimos.IntegrationPointImpl;
 import com.facebook.AccessToken;
 import com.facebook.FacebookSdk;
 import com.facebook.Profile;
@@ -32,8 +33,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
@@ -69,7 +70,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         mapFragment.getMapAsync(this);
         Toolbar toolbar = (Toolbar) findViewById(R.id.search_bar);
         toolbar.setTitle("");
-        //toolbar.setLogo(R.drawable.ic_action_action_search);
+        toolbar.setLogo(R.drawable.ic_action_action_search);
         setSupportActionBar(toolbar);
 /*
 * To force logout!
@@ -79,15 +80,16 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 
         boolean loggedIn = AccessToken.getCurrentAccessToken() != null;
         boolean profileIn = Profile.getCurrentProfile()!= null;
-        if(!loggedIn){
-            Intent intent = new Intent(context, LoginActivity.class);
-            startActivity(intent);
-        }
-        else{
+        if(loggedIn && profileIn){
             Button blogin =(Button) findViewById(R.id.blogin);
             String name = "";
             name = Profile.getCurrentProfile().getName();
             blogin.setText("Welcome \n"+name);
+
+        }
+        else{
+            Intent intent = new Intent(context, LoginActivity.class);
+            startActivity(intent);
         }
 
     }
@@ -119,7 +121,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
-        new getPlacesBackgound().execute(url1);
+        new getPlacesBackground().execute(url1);
     }
 
     @Override
@@ -128,30 +130,29 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         return false;
     }
 
-    private class getPlacesBackgound extends AsyncTask<URL, Integer, JSONArray> {
+    private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
         protected JSONArray doInBackground(URL... urls) {
+            InputStream is = null;
+            // to connection
+            int respCode = new IntegrationPointImpl().connectWithTimeout(urls[0], is);
             try {
-                HttpURLConnection conn = (HttpURLConnection) urls[0].openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("Accept", "application/json");
-                // five seconds time out for this connection
-                //conn.setConnectTimeout(5000);
-                //conn.setReadTimeout(5000);
-                if (conn.getResponseCode() != 200) {
-                    Log.d(TAG, (String)"Errores:" + conn.getResponseCode());
+
+                if (respCode != 200) {
+                    Log.d(TAG, (String)"Errores:" + respCode);
 
                 } else {
                     // responseCode = 200!
                     String line;
                     StringBuilder sb = new StringBuilder();
                     BufferedReader rd = new BufferedReader(new InputStreamReader(
-                            (conn.getInputStream())));
+                            (is)));
                     try {
                         while ((line = rd.readLine()) != null) {
                             Log.d(TAG,line);
                             sb.append(line);
                         }
                         rd.close();
+
 
                     }catch (Exception e) {
                         return null;
