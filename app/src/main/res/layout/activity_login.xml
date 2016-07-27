@@ -9,15 +9,16 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     android:gravity="center"
-    tools:context="com.everis.lucmihai.hangaround.LoginActivity">
+    tools:context="com.everis.lucmihai.hangaround.LoginActivity"
+    android:weightSum="1">
 
 
-    <Button
-
-        android:text="@string/login"
-        android:id="@+id/blogin"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+    <com.facebook.login.widget.LoginButton
+        android:id="@+id/login_button"
+        android:layout_width="342dp"
+        android:layout_height="wrap_content"
+        android:textSize="20dp"
+        android:layout_centerInParent="true" />
 
     <Button
         android:id="@+id/bcontinue"
@@ -29,6 +30,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/guesttext" />
+        android:text="@string/guesttext"
+        android:layout_gravity="center_horizontal" />
 
 </LinearLayout>

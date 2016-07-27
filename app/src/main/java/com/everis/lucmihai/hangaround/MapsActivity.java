@@ -1,6 +1,7 @@
 package com.everis.lucmihai.hangaround;
 
 import android.content.Context;
+import android.content.Intent;
 import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
@@ -10,9 +11,13 @@ import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
 
 import com.everis.lucmihai.hangaround.dokimos.IntegrationPoint;
+import com.facebook.AccessToken;
+import com.facebook.FacebookSdk;
+import com.facebook.Profile;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -58,13 +63,32 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         context = getApplicationContext();
+        FacebookSdk.sdkInitialize(this);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mapFragment= (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         Toolbar toolbar = (Toolbar) findViewById(R.id.search_bar);
         toolbar.setTitle("");
-        toolbar.setLogo(R.drawable.ic_action_action_search);
+        //toolbar.setLogo(R.drawable.ic_action_action_search);
         setSupportActionBar(toolbar);
+/*
+* To force logout!
+* AccessToken.setCurrentAccessToken(null);
+* Profile.setCurrentProfile(null);
+* */
+
+        boolean loggedIn = AccessToken.getCurrentAccessToken() != null;
+        boolean profileIn = Profile.getCurrentProfile()!= null;
+        if(!loggedIn){
+            Intent intent = new Intent(context, LoginActivity.class);
+            startActivity(intent);
+        }
+        else{
+            Button blogin =(Button) findViewById(R.id.blogin);
+            String name = "";
+            name = Profile.getCurrentProfile().getName();
+            blogin.setText("Welcome \n"+name);
+        }
 
     }
 
