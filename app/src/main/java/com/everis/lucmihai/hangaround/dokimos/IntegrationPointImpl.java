@@ -31,10 +31,12 @@ public class IntegrationPointImpl implements IntegrationPoint {
     @Override
     public int connectWithTimeout(URL url, InputStream inputStream) {
         HttpURLConnection conn = null;
+        int resultCode = 0;
         try {
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/json");
+            resultCode = conn.getResponseCode();
             inputStream = conn.getInputStream();
 
         } catch (Exception e) {
@@ -44,7 +46,7 @@ public class IntegrationPointImpl implements IntegrationPoint {
         // five seconds time out for this connection
         //conn.setConnectTimeout(5000);
         //conn.setReadTimeout(5000);
-        return 0;
+        return resultCode;
     }
 
 
