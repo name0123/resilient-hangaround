@@ -1,6 +1,7 @@
 package com.everis.lucmihai.hangaround;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.location.Criteria;
 import android.location.Geocoder;
@@ -8,6 +9,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
@@ -47,7 +49,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
     Geocoder geocoder;
     Context context;
     private boolean loggedIn = false;
-    private static final String TAG = "MapActivity";
+    private static final String TAG = "KarambaMaps";
     private final Float CTOTAL = BitmapDescriptorFactory.HUE_GREEN;
     private final Float CPARTIAL = BitmapDescriptorFactory.HUE_YELLOW;
     private final Float CUNADAPTED = BitmapDescriptorFactory.HUE_AZURE;
@@ -77,19 +79,20 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 * Profile.setCurrentProfile(null);
 * */
         String whoIsThis = "";
-        if(getIntent().getExtras() != null) whoIsThis = getIntent().getStringExtra("logged");
-        Button blogin =(Button) findViewById(R.id.blogin);
-        String name = "";
-        if(whoIsThis == "user"){
-            name = Profile.getCurrentProfile().getName();
-            blogin.setText("Welcome \n"+name);
+        if(getIntent().getExtras() != null) {
+            whoIsThis = getIntent().getStringExtra("logged");
+            Button blogin = (Button) findViewById(R.id.blogin);
+            Log.d(TAG, whoIsThis);
+            if (whoIsThis == "user") {
+                whoIsThis = Profile.getCurrentProfile().getName();
+                blogin.setText("Welcome \n" + whoIsThis);
+            } else if (whoIsThis == "guest") {
+                whoIsThis = "guest";
+                blogin.setText("Welcome \n" + whoIsThis);
+            }
         }
-        else if(whoIsThis == "guest"){
-            name = "guest";
-            blogin.setText("Welcome \n"+name);
-        }
-        else{
-            Intent intent = new Intent(context, LoginActivity.class);
+        else {
+            Intent intent = new Intent(MapsActivity.this, LoginActivity.class);
             startActivity(intent);
         }
 
@@ -125,9 +128,69 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         new getPlacesBackground().execute(url1);
     }
     private void showUserValorationOptions(){
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                this);
+
+        // set title
+        alertDialogBuilder.setTitle("Your Title");
+
+        // set dialog message
+        alertDialogBuilder
+                .setMessage("Logged : yes to exit!")
+                .setCancelable(false)
+                .setPositiveButton("Yes",new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,int id) {
+                        // if this button is clicked, close
+                        // current activity
+                        MapsActivity.this.finish();
+                    }
+                })
+                .setNegativeButton("No",new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // if this button is clicked, just close
+                        // the dialog box and do nothing
+                        dialog.cancel();
+                    }
+                });
+
+        // create alert dialog
+        AlertDialog alertDialog = alertDialogBuilder.create();
+
+        // show it
+        alertDialog.show();
 
     }
     private void showGuestOptions(){
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+                this);
+
+        // set title
+        alertDialogBuilder.setTitle("Your Title");
+
+        // set dialog message
+        alertDialogBuilder
+                .setMessage("Guest: yes to exit!")
+                .setCancelable(false)
+                .setPositiveButton("Yes",new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog,int id) {
+                        // if this button is clicked, close
+                        // current activity
+                        MapsActivity.this.finish();
+                    }
+                })
+                .setNegativeButton("No",new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        // if this button is clicked, just close
+                        // the dialog box and do nothing
+                        dialog.cancel();
+                    }
+                });
+
+        // create alert dialog
+        AlertDialog alertDialog = alertDialogBuilder.create();
+
+        // show it
+        alertDialog.show();
 
     }
     @Override
@@ -142,8 +205,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         protected JSONArray doInBackground(URL... urls) {
 
             try {
-                HttpURLConnection conn = null;
-                conn = (HttpURLConnection) urls[0].openConnection();
+                HttpURLConnection conn = (HttpURLConnection) urls[0].openConnection();
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("Accept", "application/json");
                 int respCode = conn.getResponseCode();
@@ -159,7 +221,6 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
                             (conn.getInputStream())));
                     try {
                         while ((line = rd.readLine()) != null) {
-                            Log.d(TAG,line);
                             sb.append(line);
                         }
                         rd.close();
