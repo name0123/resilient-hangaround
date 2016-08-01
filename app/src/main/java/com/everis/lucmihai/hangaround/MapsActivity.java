@@ -48,6 +48,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
     SupportMapFragment mapFragment;
     Geocoder geocoder;
     Context context;
+    private boolean loggedIn = false;
     private static final String TAG = "MapActivity";
     private final Float CTOTAL = BitmapDescriptorFactory.HUE_GREEN;
     private final Float CPARTIAL = BitmapDescriptorFactory.HUE_YELLOW;
@@ -78,7 +79,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 * Profile.setCurrentProfile(null);
 * */
 
-        boolean loggedIn = AccessToken.getCurrentAccessToken() != null;
+        loggedIn = AccessToken.getCurrentAccessToken() != null;
         boolean profileIn = Profile.getCurrentProfile()!= null;
         if(loggedIn && profileIn){
             Button blogin =(Button) findViewById(R.id.blogin);
