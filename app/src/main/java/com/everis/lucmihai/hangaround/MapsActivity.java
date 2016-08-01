@@ -12,9 +12,12 @@ import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
+import android.widget.Toast;
 
 import com.everis.lucmihai.hangaround.dokimos.IntegrationPoint;
 import com.facebook.FacebookSdk;
@@ -127,38 +130,39 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         }
         new getPlacesBackground().execute(url1);
     }
+    public void showValorationDialog() {
+        LayoutInflater inflater = getLayoutInflater();
+        View alertLayout = inflater.inflate(R.layout.valoration_dialog, null);
+        final EditText placeDescription = (EditText) alertLayout.findViewById(R.id.placeDescription);
+
+
+        final Spinner spAdaptLevel = (Spinner) alertLayout.findViewById(R.id.spAdaptLevel);
+
+
+        AlertDialog.Builder alert = new AlertDialog.Builder(this);
+        alert.setTitle("Valoration form");
+        alert.setView(alertLayout);
+        //alert.setCancelable(false);
+        alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Toast.makeText(getBaseContext(), "Cancel clicked", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String user = placeDescription.getText().toString();
+                String adaptedLevel = String.valueOf(spAdaptLevel.getSelectedItem());
+            }
+        });
+        AlertDialog dialog = alert.create();
+        dialog.show();
+    }
+
     private void showUserValorationOptions(){
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
-                this);
-
-        // set title
-        alertDialogBuilder.setTitle("Your Title");
-
-        // set dialog message
-        alertDialogBuilder
-                .setMessage("Logged : yes to exit!")
-                .setCancelable(false)
-                .setPositiveButton("Yes",new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog,int id) {
-                        // if this button is clicked, close
-                        // current activity
-                        MapsActivity.this.finish();
-                    }
-                })
-                .setNegativeButton("No",new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // if this button is clicked, just close
-                        // the dialog box and do nothing
-                        dialog.cancel();
-                    }
-                });
-
-        // create alert dialog
-        AlertDialog alertDialog = alertDialogBuilder.create();
-
-        // show it
-        alertDialog.show();
-
+        showValorationDialog();
     }
     private void showGuestOptions(){
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
@@ -195,7 +199,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
     }
     @Override
     public boolean onMarkerClick(Marker marker) {
-        if(loggedIn) showUserValorationOptions();
+        if(!loggedIn) showUserValorationOptions();
         else showGuestOptions();
 
         return false;

@@ -36,7 +36,7 @@
              android:id="@+id/txtsearch"
              android:layout_weight="1"
              />
-         
+
          <Button
              android:id="@+id/bsearch"
              android:layout_width="wrap_content"

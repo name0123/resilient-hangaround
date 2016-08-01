@@ -10,4 +10,11 @@
     <string name="search_settings">Search Places</string>
     <string name="turnOnLocationMessage">Please turn on your GPS</string>
     <string name="facebook_app_id">1095065710563560</string>
+    <string-array
+        name="adapt_array">
+        <item>UNADAPTED</item>
+        <item>PARTIAL</item>
+        <item>TOTAL</item>
+    </string-array>
+
 </resources>
