@@ -15,8 +15,6 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.everis.lucmihai.hangaround.dokimos.IntegrationPoint;
-import com.everis.lucmihai.hangaround.dokimos.IntegrationPointImpl;
-import com.facebook.AccessToken;
 import com.facebook.FacebookSdk;
 import com.facebook.Profile;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -33,8 +31,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
@@ -78,15 +76,17 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 * AccessToken.setCurrentAccessToken(null);
 * Profile.setCurrentProfile(null);
 * */
-
-        loggedIn = AccessToken.getCurrentAccessToken() != null;
-        boolean profileIn = Profile.getCurrentProfile()!= null;
-        if(loggedIn && profileIn){
-            Button blogin =(Button) findViewById(R.id.blogin);
-            String name = "";
+        String whoIsThis = "";
+        if(getIntent().getExtras() != null) whoIsThis = getIntent().getStringExtra("logged");
+        Button blogin =(Button) findViewById(R.id.blogin);
+        String name = "";
+        if(whoIsThis == "user"){
             name = Profile.getCurrentProfile().getName();
             blogin.setText("Welcome \n"+name);
-
+        }
+        else if(whoIsThis == "guest"){
+            name = "guest";
+            blogin.setText("Welcome \n"+name);
         }
         else{
             Intent intent = new Intent(context, LoginActivity.class);
@@ -124,19 +124,29 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         }
         new getPlacesBackground().execute(url1);
     }
+    private void showUserValorationOptions(){
 
+    }
+    private void showGuestOptions(){
+
+    }
     @Override
     public boolean onMarkerClick(Marker marker) {
+        if(loggedIn) showUserValorationOptions();
+        else showGuestOptions();
 
         return false;
     }
 
     private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
         protected JSONArray doInBackground(URL... urls) {
-            InputStream is = null;
-            // to connection
-            int respCode = new IntegrationPointImpl().connectWithTimeout(urls[0], is);
+
             try {
+                HttpURLConnection conn = null;
+                conn = (HttpURLConnection) urls[0].openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/json");
+                int respCode = conn.getResponseCode();
 
                 if (respCode != 200) {
                     Log.d(TAG, (String)"Errores:" + respCode);
@@ -146,7 +156,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
                     String line;
                     StringBuilder sb = new StringBuilder();
                     BufferedReader rd = new BufferedReader(new InputStreamReader(
-                            (is)));
+                            (conn.getInputStream())));
                     try {
                         while ((line = rd.readLine()) != null) {
                             Log.d(TAG,line);

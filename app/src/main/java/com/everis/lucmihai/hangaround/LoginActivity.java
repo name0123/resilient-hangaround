@@ -38,6 +38,7 @@ public class LoginActivity extends Activity {
             public void onSuccess(LoginResult loginResult) {
 
                 Intent intent = new Intent(context, MapsActivity.class);
+                intent.putExtra("logged", "user");
                 startActivity(intent);
             }
 
@@ -62,6 +63,7 @@ public class LoginActivity extends Activity {
     @OnClick(R.id.bcontinue)
     public void onClickContinue(View view){
         Intent intent = new Intent(this, MapsActivity.class);
+        intent.putExtra("logged", "guest");
         startActivity(intent);
     }
 
