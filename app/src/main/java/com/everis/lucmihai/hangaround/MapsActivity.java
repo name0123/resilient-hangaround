@@ -12,6 +12,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -30,6 +31,8 @@ import com.everis.lucmihai.hangaround.dokimos.IntegrationPoint;
 import com.facebook.AccessToken;
 import com.facebook.FacebookSdk;
 import com.facebook.Profile;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -41,20 +44,33 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.holidaycheck.permissify.DialogText;
+import com.holidaycheck.permissify.PermissifyConfig;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
 
+import javax.net.ssl.HttpsURLConnection;
+
 import butterknife.OnClick;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import stanford.androidlib.SimpleActivity;
+
+import static com.everis.lucmihai.hangaround.R.id.url;
 
 public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
@@ -62,7 +78,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 	private SupportMapFragment mapFragment;
 	private Geocoder geocoder;
     private Context context;
-    private boolean loggedIn = false;
+    private boolean loggedIn = false; // too hard coded!
     private static final String TAG = "KarambaMaps";
     private final Float CTOTAL = BitmapDescriptorFactory.HUE_GREEN;
     private final Float CPARTIAL = BitmapDescriptorFactory.HUE_YELLOW;
@@ -72,12 +88,21 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
     private final String SUNADAPTED = "UNADAPTED";
     private final String SPARTIAL = "PARTIAL";
     private final String STOTAL = "TOTAL";
+	private JSONArray places;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         context = getApplicationContext();
+	    PermissifyConfig permissifyConfig = new PermissifyConfig.Builder()
+			    .withDefaultTextForPermissions(new HashMap<String, DialogText>() {{
+				    put(Manifest.permission_group.LOCATION, new DialogText(R.string.location_rationale, R.string.location_deny_dialog));
+				    put(Manifest.permission_group.STORAGE, new DialogText(R.string.storage_rationale, R.string.storage_deny_dialog));
+			    }})
+			    .build();
+
+	    PermissifyConfig.initDefault(permissifyConfig);
         FacebookSdk.sdkInitialize(this);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mapFragment= (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -91,8 +116,13 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         if(getIntent().getExtras() != null) {
             whoIsThis = getIntent().getStringExtra("logged");
             Button blogin = (Button) findViewById(R.id.blogin);
-            whoIsThis = Profile.getCurrentProfile().getName();
-            blogin.setText("Welcome \n" + whoIsThis);
+            if(whoIsThis =="user"){
+	            whoIsThis = Profile.getCurrentProfile().getName();
+	            blogin.setText("Welcome \n" + whoIsThis);
+            }
+	        else {
+	            blogin.setText("Welcome \n" + whoIsThis);
+            }
         }
         else {
             Intent intent = new Intent(MapsActivity.this, LoginActivity.class);
@@ -146,10 +176,12 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 	 * Dialogs here
 	 *
 	 */
-	public void showValorationDialog(final Marker marker) {
+	public void showValorationDialog(final Marker marker, final int index) {
         LayoutInflater inflater = getLayoutInflater();
         View alertLayout = inflater.inflate(R.layout.valoration_dialog, null);
-        final Spinner spAdaptLevel = (Spinner) alertLayout.findViewById(R.id.spAdaptLevel);
+		final Spinner spGenAccess = (Spinner) alertLayout.findViewById(R.id.spgena);
+		final Spinner spWcAccess = (Spinner) alertLayout.findViewById(R.id.spwca);
+		final Spinner spElev = (Spinner) alertLayout.findViewById(R.id.spElev);
 
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
         alert.setTitle(marker.getTitle());
@@ -164,36 +196,43 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                String adaptedLevel = String.valueOf(spAdaptLevel.getSelectedItem());
-				LatLng place = marker.getPosition();
-				String adl = spAdaptLevel.getSelectedItem().toString();
-				Toast.makeText(getBaseContext(), adl, Toast.LENGTH_LONG).show();
-				ValorLatLong newValorationPlace = null;
+	            ValorLatLong newValPlace = new ValorLatLong();
+	            // break here; print places, and print marker
+	            try{
+		            JSONObject place = places.getJSONObject(index);
+		            newValPlace.uid = "misho0stequer2@gmail.com"; // user_id: hardcoded provisional
+		            newValPlace.lat = Double.valueOf(place.getString("latitude"));
+		            newValPlace.lng = Double.valueOf(place.getString("longitude"));
+		            newValPlace.ac = Boolean.valueOf(spGenAccess.getSelectedItem().toString());
+		            newValPlace.wc = Boolean.valueOf(spWcAccess.getSelectedItem().toString());
+		            newValPlace.el = Elev.valueOf(spElev.getSelectedItem().toString());
+		            ObjectMapper mapper = new ObjectMapper();
+		            //Object to JSON in String
+		            String newValPlaceJson = mapper.writeValueAsString(newValPlace);
+		            updatePlaceAdaptedLevel(newValPlaceJson);
 
-				updatePlaceAdaptedLevel(newValorationPlace);
+	            }catch (Exception e){
+		            // TODO: handling needed!
+		            e.printStackTrace();
+		            Log.d(TAG," ahora hay un problema grodo!");
+	            }
+
             }
         });
         AlertDialog dialog = alert.create();
         dialog.show();
     }
 
-	private void updatePlaceAdaptedLevel(ValorLatLong adl) {
-		URL url1 = null;
+	private void updatePlaceAdaptedLevel(String nvl) {
+
 		try {
-			String placeUpdate = "https://mobserv.herokuapp.com/places/update?ll=";
-			placeUpdate += Double.toString(adl.lat);
-			placeUpdate += ',';
-			placeUpdate += Double.toString(place.longitude);
-			placeUpdate += "&al="+adl;
-
-			Log.d(TAG,placeUpdate);
-			url1 = new URL(placeUpdate);
-
-
-		} catch (MalformedURLException e) {
+			// testing coords: cs, if not go to four
+			String setValoCS = "https://mobserv.herokuapp.com/valorations/newcs";
+			PostOk connection = new PostOk();
+			String resp = connection.post(setValoCS, nvl);
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		new getPlacesBackground().execute(url1);
 	}
 
 
@@ -227,8 +266,19 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 
     }
     private void showUserValorationOptions(Marker marker){
-        // this should be different
-        showValorationDialog(marker);
+        // I need to get the index of the place pointed by the marker
+	    String title = marker.getTitle();
+	    int index = -1;
+	    for(int i = 0; i < places.length(); ++i){
+		    try {
+			    String placeName = ((JSONObject) places.get(i)).getString("name");
+			    if (title.equals(placeName)) index = i;
+		    }
+		    catch (Exception e){
+			    e.printStackTrace();
+		    }
+	    }
+	    showValorationDialog(marker, index);
     }
 
     private void showGuestOptions(){
@@ -265,7 +315,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 
     }
 
-private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
+	private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
 		private ProgressDialog Dialog = new ProgressDialog(MapsActivity.this);
 
 		@Override
@@ -316,13 +366,38 @@ private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
         protected void onPostExecute(JSONArray result) {
 			Dialog.dismiss();
             if(result != null) {
-				go(result);
+	            places = result;
+	            go();
             }
             else{
                 // no places found, to be handled
             }
         }
     }
+	private class PostOk {
+		public final MediaType JSON
+				= MediaType.parse("application/json; charset=utf-8");
+
+		OkHttpClient client = new OkHttpClient();
+
+		String post(String url, String json) throws IOException {
+			Log.d(TAG, "@@@@@@@@@@@@@@@@@@@@@@@@@");
+			Log.d(TAG,url);
+			Log.d(TAG,json);
+
+			StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+			StrictMode.setThreadPolicy(policy);
+			RequestBody body = RequestBody.create(JSON, json);
+			Request request = new Request.Builder()
+					.url(url)
+					.post(body)
+					.build();
+			try (Response response = client.newCall(request).execute()) {
+				return response.body().string();
+			}
+		}
+	}
+	@JsonPropertyOrder({"uid","lat","lng","ac","wc","el"})
 	private class ValorLatLong {
 		String uid;
 		Double lat;
@@ -393,7 +468,7 @@ private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
 		}
 
     }
-	private void go(JSONArray places){
+	private void go(){
 		/**
 		 * we came here from postExecuteGett places
 		 * If lat & long != 0 (somewhere near Guinee Golf)

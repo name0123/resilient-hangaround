@@ -10,11 +10,20 @@
     <string name="search_settings">Search Places</string>
     <string name="turnOnLocationMessage">Please turn on your GPS</string>
     <string name="facebook_app_id">817507255055936</string>
+    <string name="location_rationale">Location permission required</string>
+    <string name="location_deny_dialog">Sorry, we do not have permission to do that.</string>
+    <string name="storage_rationale">Media permission required</string>
+    <string name="storage_deny_dialog">Sorry, we do not have media permission.</string>
+    <string-array
+        name="elev_adapt_array">
+        <item>HAS_NOT</item>
+        <item>HAS</item>
+        <item>NO_NEED</item>
+    </string-array>
     <string-array
         name="adapt_array">
-        <item>UNADAPTED</item>
-        <item>PARTIAL</item>
-        <item>TOTAL</item>
+        <item>FALSE</item>
+        <item>TRUE</item>
     </string-array>
 
 </resources>

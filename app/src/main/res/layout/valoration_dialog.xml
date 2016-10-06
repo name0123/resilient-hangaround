@@ -3,23 +3,68 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="15dp" >
+    android:padding="15px"
+
+    >
 
        <LinearLayout android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal" >
+                     android:layout_height="wrap_content"
+                     android:gravity="center_vertical"
+                     android:paddingBottom="15px"
+                     android:orientation="horizontal" >
 
         <TextView android:layout_width="0dip"
             android:layout_weight=".3"
             android:layout_height="wrap_content"
-            android:text="Adapted Level:"
+            android:text="General Access  "
             />
 
-        <Spinner android:id="@+id/spAdaptLevel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:entries="@array/adapt_array"
+        <Spinner android:id="@+id/spgena"
+                 android:layout_width="match_parent"
+                 android:layout_height="wrap_content"
+                 android:entries="@array/adapt_array"
+            />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:gravity="center_vertical"
+                  android:orientation="horizontal"
+                  android:paddingBottom="15px"
+
+        >
+
+        <TextView android:layout_width="0dip"
+                  android:layout_weight=".3"
+                  android:layout_height="wrap_content"
+                  android:text="Accessible WC   "
+
+            />
+
+        <Spinner android:id="@+id/spwca"
+                 android:layout_width="match_parent"
+                 android:layout_height="wrap_content"
+                 android:entries="@array/adapt_array"
+                 android:layout_gravity="right"
+            />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:gravity="center_vertical"
+                  android:paddingBottom="15px"
+                  android:orientation="horizontal" >
+
+        <TextView android:layout_width="0dip"
+                  android:layout_weight=".3"
+                  android:layout_height="wrap_content"
+                  android:text="Elevator Access "
+                  android:layout_gravity="right"
+            />
+
+        <Spinner android:id="@+id/spElev"
+                 android:layout_width="match_parent"
+                 android:layout_height="wrap_content"
+                 android:entries="@array/elev_adapt_array"
+                 android:layout_gravity="right"
             />
     </LinearLayout>
 
