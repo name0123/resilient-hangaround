@@ -1,5 +1,6 @@
 package com.everis.lucmihai.hangaround;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.Manifest;
 import android.content.DialogInterface;
@@ -110,7 +111,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 
 	@Override
 	public boolean onMarkerClick(Marker marker) {
-		if(!loggedIn) showUserValorationOptions();
+		if(!loggedIn) showUserValorationOptions(marker);
 		else showGuestOptions();
 
 		return false;
@@ -145,13 +146,13 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 	 * Dialogs here
 	 *
 	 */
-	public void showValorationDialog() {
+	public void showValorationDialog(final Marker marker) {
         LayoutInflater inflater = getLayoutInflater();
         View alertLayout = inflater.inflate(R.layout.valoration_dialog, null);
         final Spinner spAdaptLevel = (Spinner) alertLayout.findViewById(R.id.spAdaptLevel);
 
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
-        alert.setTitle("Valoration form");
+        alert.setTitle(marker.getTitle());
         alert.setView(alertLayout);
         alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             @Override
@@ -164,6 +165,8 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 String adaptedLevel = String.valueOf(spAdaptLevel.getSelectedItem());
+				LatLng place = marker.getPosition();
+				
             }
         });
         AlertDialog dialog = alert.create();
@@ -198,9 +201,9 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         alertDialog.show();
 
     }
-    private void showUserValorationOptions(){
+    private void showUserValorationOptions(Marker marker){
         // this should be different
-        showValorationDialog();
+        showValorationDialog(marker);
     }
 
     private void showGuestOptions(){
@@ -238,7 +241,16 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
     }
 
     private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
-        protected JSONArray doInBackground(URL... urls) {
+		private ProgressDialog Dialog = new ProgressDialog(MapsActivity.this);
+
+		@Override
+		protected void onPreExecute()
+		{
+			Dialog.setMessage("Loading places ...");
+			Dialog.show();
+		}
+
+		protected JSONArray doInBackground(URL... urls) {
 
             try {
                 HttpURLConnection conn = (HttpURLConnection) urls[0].openConnection();
@@ -277,6 +289,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 
 
         protected void onPostExecute(JSONArray result) {
+			Dialog.dismiss();
             if(result != null) {
 				go(result);
             }
@@ -295,10 +308,10 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 			lng = ((JSONObject) places.get(0)).getDouble("longitude");
 			for (int i = 1; i < places.length(); ++i){
 				if(((JSONObject) places.get(i)).getDouble("latitude") < lat){
-					lat = ((JSONObject) places.get(0)).getDouble("latitude");
+					lat = ((JSONObject) places.get(i)).getDouble("latitude");
 				}
 				if(((JSONObject) places.get(i)).getDouble("longitude") < lng){
-					lng = ((JSONObject) places.get(0)).getDouble("longitude");
+					lng = ((JSONObject) places.get(i)).getDouble("longitude");
 				}
 			}
 		} catch (JSONException e) {
@@ -315,16 +328,17 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 			lng = ((JSONObject) places.get(0)).getDouble("longitude");
 			for (int i = 1; i < places.length(); ++i){
 				if(((JSONObject) places.get(i)).getDouble("latitude") > lat){
-					lat = ((JSONObject) places.get(0)).getDouble("latitude");
+					lat = ((JSONObject) places.get(i)).getDouble("latitude");
 				}
 				if(((JSONObject) places.get(i)).getDouble("longitude") > lng){
-					lng = ((JSONObject) places.get(0)).getDouble("longitude");
+					lng = ((JSONObject) places.get(i)).getDouble("longitude");
 				}
 			}
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
 		LatLng result = new LatLng(lat,lng);
+
 		return result;
 	}
 
@@ -362,13 +376,13 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 				firstPlace = minim(places);
 				LatLng secondPlace = maxim(places);
 				LatLngBounds llb = new LatLngBounds(firstPlace,secondPlace);
-				Toast.makeText(getBaseContext(), "See firstPlace: "+firstPlace.toString(), Toast.LENGTH_SHORT).show();
-				mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(llb,0));
+				Toast.makeText(getBaseContext(), TAG+" more places "+j, Toast.LENGTH_SHORT).show();
+				mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(llb,60));
 				showPlaces(places);
 			}
 			else {
 				// there is just one place
-				Toast.makeText(getBaseContext(), TAG+"just one dude!", Toast.LENGTH_SHORT).show();
+				Toast.makeText(getBaseContext(), TAG+" just one dude!", Toast.LENGTH_SHORT).show();
 				mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(firstPlace,10f));
 			}
 		}

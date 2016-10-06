@@ -23,26 +23,5 @@
             />
     </LinearLayout>
 
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:orientation="horizontal"
 
-        >
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Type in a breif description:"
-            />
-
-        <EditText android:id="@+id/placeDescription"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:singleLine="false"
-            android:layout_margin="12dp"
-            android:lines="3"
-            />
-    </RelativeLayout>
 </LinearLayout>
