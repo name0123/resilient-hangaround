@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 
-import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
@@ -31,21 +30,13 @@ public class LoginActivity extends Activity {
         FacebookSdk.sdkInitialize(this);
         callbackManager = CallbackManager.Factory.create();
 
-        //try here
-        if(isLoggedIn()){
-            Intent intent = new Intent(context, MapsActivity.class);
-            intent.putExtra("logged", "user");
-            startActivity(intent);
-        }
-
         setContentView(R.layout.activity_login);
         info = (TextView)findViewById(R.id.info);
         loginButton = (LoginButton)findViewById(R.id.login_button);
-
-
         loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
+
                 Intent intent = new Intent(context, MapsActivity.class);
                 intent.putExtra("logged", "user");
                 startActivity(intent);
@@ -75,8 +66,6 @@ public class LoginActivity extends Activity {
         intent.putExtra("logged", "guest");
         startActivity(intent);
     }
-    public boolean isLoggedIn() {
-        AccessToken accessToken = AccessToken.getCurrentAccessToken();
-        return accessToken != null;
-    }
+
+
 }
