@@ -157,7 +157,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                Toast.makeText(getBaseContext(), "Cancel clicked", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getBaseContext(), "Cancel clicked", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -166,13 +166,38 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
             public void onClick(DialogInterface dialog, int which) {
                 String adaptedLevel = String.valueOf(spAdaptLevel.getSelectedItem());
 				LatLng place = marker.getPosition();
-				
+				String adl = spAdaptLevel.getSelectedItem().toString();
+				Toast.makeText(getBaseContext(), adl, Toast.LENGTH_LONG).show();
+				ValorLatLong newValorationPlace = null;
+
+				updatePlaceAdaptedLevel(newValorationPlace);
             }
         });
         AlertDialog dialog = alert.create();
         dialog.show();
     }
-    private void gpsRequestDialog(){
+
+	private void updatePlaceAdaptedLevel(ValorLatLong adl) {
+		URL url1 = null;
+		try {
+			String placeUpdate = "https://mobserv.herokuapp.com/places/update?ll=";
+			placeUpdate += Double.toString(adl.lat);
+			placeUpdate += ',';
+			placeUpdate += Double.toString(place.longitude);
+			placeUpdate += "&al="+adl;
+
+			Log.d(TAG,placeUpdate);
+			url1 = new URL(placeUpdate);
+
+
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}
+		new getPlacesBackground().execute(url1);
+	}
+
+
+	private void gpsRequestDialog(){
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
                 this);
 
@@ -240,7 +265,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 
     }
 
-    private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
+private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
 		private ProgressDialog Dialog = new ProgressDialog(MapsActivity.this);
 
 		@Override
@@ -298,6 +323,19 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
             }
         }
     }
+	private class ValorLatLong {
+		String uid;
+		Double lat;
+		Double lng;
+		Boolean ac;
+		Boolean wc;
+		Elev el;
+	}
+	private enum Elev{
+		HAS,HAS_NOT,NO_NEED
+	}
+
+
 	private LatLng minim(JSONArray places){
 
 		double lat = 0;
