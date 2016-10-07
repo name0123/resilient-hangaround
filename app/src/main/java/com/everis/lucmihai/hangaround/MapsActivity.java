@@ -1,21 +1,17 @@
 package com.everis.lucmihai.hangaround;
 
+import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Geocoder;
-import android.location.Location;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.provider.Settings;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -27,14 +23,10 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
-import com.everis.lucmihai.hangaround.dokimos.IntegrationPoint;
-import com.facebook.AccessToken;
 import com.facebook.FacebookSdk;
 import com.facebook.Profile;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -60,8 +52,6 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 
-import javax.net.ssl.HttpsURLConnection;
-
 import butterknife.OnClick;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -69,8 +59,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import stanford.androidlib.SimpleActivity;
-
-import static com.everis.lucmihai.hangaround.R.id.url;
 
 public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
@@ -103,6 +91,8 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 			    .build();
 
 	    PermissifyConfig.initDefault(permissifyConfig);
+	    StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+	    StrictMode.setThreadPolicy(policy);
         FacebookSdk.sdkInitialize(this);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mapFragment= (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
@@ -381,12 +371,8 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 		OkHttpClient client = new OkHttpClient();
 
 		String post(String url, String json) throws IOException {
-			Log.d(TAG, "@@@@@@@@@@@@@@@@@@@@@@@@@");
-			Log.d(TAG,url);
-			Log.d(TAG,json);
 
-			StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-			StrictMode.setThreadPolicy(policy);
+
 			RequestBody body = RequestBody.create(JSON, json);
 			Request request = new Request.Builder()
 					.url(url)
