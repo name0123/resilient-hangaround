@@ -5,6 +5,7 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.LocationManager;
@@ -23,6 +24,8 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
+import com.everis.lucmihai.hangaround.maps.Connection;
 import com.facebook.FacebookSdk;
 import com.facebook.Profile;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -60,7 +63,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import stanford.androidlib.SimpleActivity;
 
-public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
+public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteListener, OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private GoogleMap mMap;
 	private SupportMapFragment mapFragment;
@@ -77,12 +80,15 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
     private final String SPARTIAL = "PARTIAL";
     private final String STOTAL = "TOTAL";
 	private JSONArray places;
+	private Connection conne;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         context = getApplicationContext();
+	    conne = new Connection(MapsActivity.this);
+
 	    PermissifyConfig permissifyConfig = new PermissifyConfig.Builder()
 			    .withDefaultTextForPermissions(new HashMap<String, DialogText>() {{
 				    put(Manifest.permission_group.LOCATION, new DialogText(R.string.location_rationale, R.string.location_deny_dialog));
@@ -172,9 +178,16 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 		final Spinner spGenAccess = (Spinner) alertLayout.findViewById(R.id.spgena);
 		final Spinner spWcAccess = (Spinner) alertLayout.findViewById(R.id.spwca);
 		final Spinner spElev = (Spinner) alertLayout.findViewById(R.id.spElev);
+		String placeCategory = "";
+		try{
+			JSONObject place = places.getJSONObject(index);
+			placeCategory = place.get("category").toString();
+		} catch (Exception  e){
+			e.printStackTrace();
+		}
 
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
-        alert.setTitle(marker.getTitle());
+        alert.setTitle(placeCategory + ": " + marker.getTitle());
         alert.setView(alertLayout);
         alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
             @Override
@@ -213,6 +226,40 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         dialog.show();
     }
 
+	public void showPlaceValorationDialog(final Marker marker, final int index) {
+		LayoutInflater inflater = getLayoutInflater();
+		View alertLayout = inflater.inflate(R.layout.place_valoration_dialog, null);
+
+		String placeCategory = "";
+		try{
+			JSONObject place = places.getJSONObject(index);
+			placeCategory = place.get("category").toString();
+		} catch (Exception  e){
+			e.printStackTrace();
+		}
+
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		alert.setTitle(placeCategory + ": " + marker.getTitle());
+		alert.setView(alertLayout);
+		alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				//Toast.makeText(getBaseContext(), "Cancel clicked", Toast.LENGTH_SHORT).show();
+			}
+		});
+
+		alert.setPositiveButton("Vote", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// wanna vote the place!
+				showValorationDialog(marker, index);
+			}
+		});
+		AlertDialog dialog = alert.create();
+		dialog.show();
+		dialog.getWindow().setBackgroundDrawableResource(android.R.color.holo_blue_dark);
+
+	}
 	private void updatePlaceAdaptedLevel(String nvl) {
 
 		try {
@@ -220,6 +267,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 			String setValoCS = "https://mobserv.herokuapp.com/valorations/newcs";
 			PostOk connection = new PostOk();
 			String resp = connection.post(setValoCS, nvl);
+			// TODO: change marker here!
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -227,6 +275,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 
 
 	private void gpsRequestDialog(){
+		// TODO: use this function!
         AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
                 this);
 
@@ -268,7 +317,7 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 			    e.printStackTrace();
 		    }
 	    }
-	    showValorationDialog(marker, index);
+	    showPlaceValorationDialog(marker, index);
     }
 
     private void showGuestOptions(){
@@ -304,6 +353,12 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
         alertDialog.show();
 
     }
+
+	@Override
+	public void onTaskComplete(Object result, int number) {
+		String res = (String) result;
+		Log.d(TAG, res);
+	}
 
 	private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
 		private ProgressDialog Dialog = new ProgressDialog(MapsActivity.this);
@@ -477,6 +532,11 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 				LatLngBounds llb = new LatLngBounds(firstPlace,secondPlace);
 				Toast.makeText(getBaseContext(), TAG+" more places "+j, Toast.LENGTH_SHORT).show();
 				mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(llb,60));
+				String surl = "https://mobserv.herokuapp.com/places/getfour?id=";
+				String args[] = new String[2];
+				args[0] = surl;
+				args[1] = places.toString();
+				conne.execute(args);
 				showPlaces(places);
 			}
 			else {
@@ -492,10 +552,8 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 
 	private void showPlaces(JSONArray places){
 		try {
-			JSONObject place = (JSONObject) places.get(0);
-			showMarker(place);
-			for(int i = 1; i < places.length(); ++i){
-				place = (JSONObject)places.get(i);
+			for(int i = 0; i < places.length(); ++i){
+				JSONObject place = (JSONObject)places.get(i);
 				showMarker(place);
 			}
 
@@ -511,15 +569,12 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 		try {
 			lat = place.getDouble("latitude");
 			lng = place.getDouble("longitude");
+			// to be switched
 			adaptationLevel = place.getString("adaptedLevel");
 			placeName = place.getString("name");
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
-
-        /*enum AdaptedLevel {
-            UNKNOWN, UNADAPTED, PARTIAL, TOTAL
-        }*/
 
 		LatLng placeLocation = new LatLng(lat, lng);
 
@@ -553,7 +608,23 @@ public class MapsActivity extends SimpleActivity implements OnMapReadyCallback, 
 			);
 		}
 	}
+	@Override
+	protected void onStart(){
+		super.onStart();
+		SharedPreferences sp = getSharedPreferences("run", MODE_PRIVATE);
+		SharedPreferences.Editor ed = sp.edit();
+		ed.putBoolean("active", true);
+		ed.commit();
+	}
+	@Override
+	protected void onStop() {
+		super.onStop();
+		SharedPreferences sp = getSharedPreferences("run", MODE_PRIVATE);
+		SharedPreferences.Editor ed = sp.edit();
+		ed.putBoolean("active", false);
+		ed.commit();
 
+	}
 
 	/**
 	 * On clicks  only 2 of them!
