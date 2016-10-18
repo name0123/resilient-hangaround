@@ -276,6 +276,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	@Override
 	public boolean onMarkerClick(Marker marker) {
 		//TODO: figure this out: you show the vote button if user
+		// on simple click just show title
+		// on long(dragstart) showUserValorationOptions!
+		//http://stackoverflow.com/questions/15391665/setting-a-longclicklistener-on-a-map-marker
 		showUserValorationOptions(marker);
 		//else showGuestOptions();
 		return false;
@@ -783,6 +786,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
         EditText searchedText = (EditText) findViewById(R.id.txtsearch);
         String searchedLocation = searchedText.getText().toString();
 	    // TODO: some cases here if shearchedLocation is address, place, city country ...etc
+	    // https://developer.android.com/reference/android/location/Geocoder.html
         try {
            //Address address = (Address) geocoder.getFromLocationName(searchedLocation,1); cool
             geocoder = new Geocoder(this);
