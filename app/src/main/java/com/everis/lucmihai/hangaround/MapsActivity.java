@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.LocationManager;
@@ -13,6 +14,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -88,7 +90,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
         setContentView(R.layout.activity_maps);
         context = getApplicationContext();
 	    conne = new Connection(MapsActivity.this);
-
 	    PermissifyConfig permissifyConfig = new PermissifyConfig.Builder()
 			    .withDefaultTextForPermissions(new HashMap<String, DialogText>() {{
 				    put(Manifest.permission_group.LOCATION, new DialogText(R.string.location_rationale, R.string.location_deny_dialog));
@@ -130,9 +131,24 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public void onMapReady(GoogleMap googleMap) {
 		mMap = googleMap;
 		context = getApplicationContext();
-		mMap.getUiSettings().setMyLocationButtonEnabled(true);
-		mMap.setOnMarkerClickListener(this);
 
+		if(!permisions()){
+			gpsRequestDialog();
+		}
+		else {
+			// if we have the permision
+			mMap.getUiSettings().setMyLocationButtonEnabled(true);
+			//mMap.setOnMarkerClickListener(this);
+		}
+
+
+
+	}
+
+	private boolean permisions() {
+		if (ActivityCompat.checkSelfPermission(MapsActivity.this,android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+				&& ActivityCompat.checkSelfPermission(MapsActivity.this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return true;
+		return false;
 	}
 
 	@Override
@@ -289,7 +305,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
                 .setPositiveButton("Yes",new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog,int id) {
                         // if this button is clicked, close
-                    isGPSEnable();
+	                    enableGps();
                     }
                 })
                 .setNegativeButton("No",new DialogInterface.OnClickListener() {
@@ -496,7 +512,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		return result;
 	}
 
-    public void isGPSEnable(){
+    public void enableGps(){
         LocationManager service = (LocationManager) getSystemService(LOCATION_SERVICE);
         boolean enabled = service
                 .isProviderEnabled(LocationManager.GPS_PROVIDER);
@@ -504,10 +520,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
             Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
             startActivity(intent);
         }
-		else{
-			// we will see what to do here
-		}
-
     }
 	private void go(){
 		/**
