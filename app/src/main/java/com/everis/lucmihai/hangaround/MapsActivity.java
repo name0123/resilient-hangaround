@@ -9,12 +9,16 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Geocoder;
+import android.location.Location;
 import android.location.LocationManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.provider.Settings;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -32,6 +36,11 @@ import com.facebook.FacebookSdk;
 import com.facebook.Profile;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -65,9 +74,13 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import stanford.androidlib.SimpleActivity;
 
-public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteListener, OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
+public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteListener, OnMapReadyCallback,
+		GoogleApiClient.ConnectionCallbacks,
+		GoogleApiClient.OnConnectionFailedListener,
+		GoogleMap.OnMarkerClickListener,
+		LocationListener {
 
-    private GoogleMap mMap;
+    private GoogleMap mGoogleMap;
 	private SupportMapFragment mapFragment;
 	private Geocoder geocoder;
     private Context context;
@@ -84,78 +97,187 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private JSONArray places;
 	private Connection conne;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_maps);
-        context = getApplicationContext();
-	    conne = new Connection(MapsActivity.this);
-	    PermissifyConfig permissifyConfig = new PermissifyConfig.Builder()
-			    .withDefaultTextForPermissions(new HashMap<String, DialogText>() {{
-				    put(Manifest.permission_group.LOCATION, new DialogText(R.string.location_rationale, R.string.location_deny_dialog));
-				    put(Manifest.permission_group.STORAGE, new DialogText(R.string.storage_rationale, R.string.storage_deny_dialog));
-			    }})
-			    .build();
 
-	    PermissifyConfig.initDefault(permissifyConfig);
-	    StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-	    StrictMode.setThreadPolicy(policy);
-        FacebookSdk.sdkInitialize(this);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        mapFragment= (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.search_bar);
-        toolbar.setTitle("");
-        toolbar.setLogo(R.drawable.ic_action_action_search);
-        setSupportActionBar(toolbar);
-        String whoIsThis = "";
-
-        if(getIntent().getExtras() != null) {
-            whoIsThis = getIntent().getStringExtra("logged");
-            Button blogin = (Button) findViewById(R.id.blogin);
-            if(whoIsThis =="user"){
-	            whoIsThis = Profile.getCurrentProfile().getName();
-	            blogin.setText("Welcome \n" + whoIsThis);
-            }
-	        else {
-	            blogin.setText("Welcome \n" + whoIsThis);
-            }
-        }
-        else {
-            Intent intent = new Intent(MapsActivity.this, LoginActivity.class);
-            startActivity(intent);
-        }
-    }
+	SupportMapFragment mapFrag;
+	LocationRequest mLocationRequest;
+	GoogleApiClient mGoogleApiClient;
+	Location mLastLocation;
+	Marker mCurrLocationMarker;
 
 	@Override
-	public void onMapReady(GoogleMap googleMap) {
-		mMap = googleMap;
-		context = getApplicationContext();
+	protected void onCreate(Bundle savedInstanceState)
+	{
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_maps);
 
-		if(!permisions()){
-			gpsRequestDialog();
+		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			checkLocationPermission();
+		}
+
+		mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+		mapFrag.getMapAsync(this);
+	}
+
+	@Override
+	public void onPause() {
+		super.onPause();
+
+		//stop location updates when Activity is no longer active
+		if (mGoogleApiClient != null) {
+			LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+		}
+	}
+
+	@Override
+	public void onMapReady(GoogleMap googleMap)
+	{
+		mGoogleMap=googleMap;
+		mGoogleMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+		mGoogleMap.setOnMarkerClickListener(this);
+		//Initialize Google Play Services
+		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			if (ContextCompat.checkSelfPermission(this,
+					Manifest.permission.ACCESS_FINE_LOCATION)
+					== PackageManager.PERMISSION_GRANTED) {
+				buildGoogleApiClient();
+				mGoogleMap.setMyLocationEnabled(true);
+			}
 		}
 		else {
-			// if we have the permision
-			mMap.getUiSettings().setMyLocationButtonEnabled(true);
-			//mMap.setOnMarkerClickListener(this);
+			buildGoogleApiClient();
+			mGoogleMap.setMyLocationEnabled(true);
+		}
+	}
+
+	protected synchronized void buildGoogleApiClient() {
+		mGoogleApiClient = new GoogleApiClient.Builder(this)
+				.addConnectionCallbacks(this)
+				.addOnConnectionFailedListener(this)
+				.addApi(LocationServices.API)
+				.build();
+		mGoogleApiClient.connect();
+	}
+
+	@Override
+	public void onConnected(Bundle bundle) {
+		mLocationRequest = new LocationRequest();
+		mLocationRequest.setInterval(1000);
+		mLocationRequest.setFastestInterval(1000);
+		mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+		if (ContextCompat.checkSelfPermission(this,
+				Manifest.permission.ACCESS_FINE_LOCATION)
+				== PackageManager.PERMISSION_GRANTED) {
+			LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+		}
+	}
+
+	@Override
+	public void onConnectionSuspended(int i) {}
+
+	@Override
+	public void onConnectionFailed(ConnectionResult connectionResult) {}
+
+	@Override
+	public void onLocationChanged(Location location)
+	{
+		mLastLocation = location;
+		if (mCurrLocationMarker != null) {
+			mCurrLocationMarker.remove();
 		}
 
+		//Place current location marker
+		LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+		MarkerOptions markerOptions = new MarkerOptions();
+		markerOptions.position(latLng);
+		markerOptions.title("Current Position");
+		markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
+		mCurrLocationMarker = mGoogleMap.addMarker(markerOptions);
 
+		//move map camera
+		mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+		mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(11));
 
+		//stop location updates
+		if (mGoogleApiClient != null) {
+			LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, (com.google.android.gms.location.LocationListener) this);
+		}
 	}
 
-	private boolean permisions() {
-		if (ActivityCompat.checkSelfPermission(MapsActivity.this,android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-				&& ActivityCompat.checkSelfPermission(MapsActivity.this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return true;
-		return false;
+	public static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
+	public boolean checkLocationPermission(){
+		if (ContextCompat.checkSelfPermission(this,
+				Manifest.permission.ACCESS_FINE_LOCATION)
+				!= PackageManager.PERMISSION_GRANTED) {
+
+			// Should we show an explanation?
+			if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+					Manifest.permission.ACCESS_FINE_LOCATION)) {
+
+				//TODO:
+				// Show an expanation to the user *asynchronously* -- don't block
+				// this thread waiting for the user's response! After the user
+				// sees the explanation, try again to request the permission.
+
+				//Prompt the user once explanation has been shown
+				//(just doing it here for now, note that with this code, no explanation is shown)
+				ActivityCompat.requestPermissions(this,
+						new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+						MY_PERMISSIONS_REQUEST_LOCATION);
+
+
+			} else {
+				// No explanation needed, we can request the permission.
+				ActivityCompat.requestPermissions(this,
+						new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+						MY_PERMISSIONS_REQUEST_LOCATION);
+			}
+			return false;
+		} else {
+			return true;
+		}
 	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode,
+	                                       String permissions[], int[] grantResults) {
+		switch (requestCode) {
+			case MY_PERMISSIONS_REQUEST_LOCATION: {
+				// If request is cancelled, the result arrays are empty.
+				if (grantResults.length > 0
+						&& grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+					// permission was granted, yay! Do the
+					// location-related task you need to do.
+					if (ContextCompat.checkSelfPermission(this,
+							Manifest.permission.ACCESS_FINE_LOCATION)
+							== PackageManager.PERMISSION_GRANTED) {
+
+						if (mGoogleApiClient == null) {
+							buildGoogleApiClient();
+						}
+						mGoogleMap.setMyLocationEnabled(true);
+					}
+
+				} else {
+
+					// permission denied, boo! Disable the
+					// functionality that depends on this permission.
+					Toast.makeText(this, "permission denied", Toast.LENGTH_LONG).show();
+				}
+				return;
+			}
+
+			// other 'case' lines to check for other
+			// permissions this app might request
+		}
+	}
+
 
 	@Override
 	public boolean onMarkerClick(Marker marker) {
-		if(!loggedIn) showUserValorationOptions(marker);
-		else showGuestOptions();
-
+		//TODO: figure this out: you show the vote button if user
+		showUserValorationOptions(marker);
+		//else showGuestOptions();
 		return false;
 	}
 
@@ -173,6 +295,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
             fourSquareSearch += Double.toString(latitude);
             fourSquareSearch += ',';
             fourSquareSearch += Double.toString(longitude);
+	        fourSquareSearch += "&radius=150";
+	        fourSquareSearch += "&limit=20";
+
             //Toast.makeText(getBaseContext(), TAG+fourSquareSearch, Toast.LENGTH_SHORT).show();
             Log.d(TAG,fourSquareSearch);
             url1 = new URL(fourSquareSearch);
@@ -431,6 +556,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	            go();
             }
             else{
+	            Toast.makeText(getBaseContext(), TAG+" No places found!", Toast.LENGTH_SHORT).show();
                 // no places found, to be handled
             }
         }
@@ -442,8 +568,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		OkHttpClient client = new OkHttpClient();
 
 		String post(String url, String json) throws IOException {
-
-
+			Log.d(TAG,' '+url+' '+ json.toString());
 			RequestBody body = RequestBody.create(JSON, json);
 			Request request = new Request.Builder()
 					.url(url)
@@ -543,21 +668,23 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				LatLng secondPlace = maxim(places);
 				LatLngBounds llb = new LatLngBounds(firstPlace,secondPlace);
 				Toast.makeText(getBaseContext(), TAG+" more places "+j, Toast.LENGTH_SHORT).show();
-				mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(llb,60));
+				mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(llb,60));
 				String surl = "https://mobserv.herokuapp.com/places/getfour?id=";
-				String args[] = new String[2];
-				args[0] = surl;
-				args[1] = places.toString();
-				conne.execute(args);
+				String args[] = new String[] {surl, places.toString()};
+
+				//Toast.makeText(getBaseContext(), TAG+places.toString(), Toast.LENGTH_SHORT).show();
+				// TODO: this connection is problematic
+				//conne.execute(args);
 				showPlaces(places);
 			}
 			else {
 				// there is just one place
-				Toast.makeText(getBaseContext(), TAG+" just one dude!", Toast.LENGTH_SHORT).show();
-				mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(firstPlace,10f));
+				Toast.makeText(getBaseContext(),"Just one dude!", Toast.LENGTH_SHORT).show();
+				mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(firstPlace,10f));
 			}
 		}
 		catch (Exception e){
+			Toast.makeText(getBaseContext(), " No place found", Toast.LENGTH_SHORT).show();
 			e.printStackTrace();
 		}
 	}
@@ -591,7 +718,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		LatLng placeLocation = new LatLng(lat, lng);
 
 		if(adaptationLevel.equals(SUNKNOWN)){
-			Marker placeMarker = mMap.addMarker(new MarkerOptions()
+			Marker placeMarker = mGoogleMap.addMarker(new MarkerOptions()
 					.position(placeLocation)
 					.icon(BitmapDescriptorFactory.defaultMarker(CUNKNOWN))
 					.title(placeName)
@@ -599,21 +726,21 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 
 		else if(adaptationLevel.equals(STOTAL)) {
-			Marker placeMarker = mMap.addMarker(new MarkerOptions()
+			Marker placeMarker = mGoogleMap.addMarker(new MarkerOptions()
 					.position(placeLocation)
 					.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
 					.title(placeName)
 			);
 		}
 		else if(adaptationLevel.equals(SPARTIAL)) {
-			Marker placeMarker = mMap.addMarker(new MarkerOptions()
+			Marker placeMarker = mGoogleMap.addMarker(new MarkerOptions()
 					.position(placeLocation)
 					.icon(BitmapDescriptorFactory.defaultMarker(CPARTIAL))
 					.title(placeName)
 			);
 		}
 		else if(adaptationLevel.equals(SUNADAPTED)) {
-			Marker placeMarker = mMap.addMarker(new MarkerOptions()
+			Marker placeMarker = mGoogleMap.addMarker(new MarkerOptions()
 					.position(placeLocation)
 					.icon(BitmapDescriptorFactory.defaultMarker(CUNADAPTED))
 					.title(placeName)
@@ -655,11 +782,13 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         EditText searchedText = (EditText) findViewById(R.id.txtsearch);
         String searchedLocation = searchedText.getText().toString();
+	    // TODO: some cases here if shearchedLocation is address, place, city country ...etc
         try {
            //Address address = (Address) geocoder.getFromLocationName(searchedLocation,1); cool
             geocoder = new Geocoder(this);
             List<android.location.Address> addresses = geocoder.getFromLocationName(searchedLocation,1);
             if(addresses.size() > 0) {
+
                 double latitude= addresses.get(0).getLatitude();
                 double longitude= addresses.get(0).getLongitude();
                 getPlaces(latitude,longitude);

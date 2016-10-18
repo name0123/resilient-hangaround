@@ -26,11 +26,12 @@ public class Connection extends AsyncTask<String, Process, String> {
 
 	protected void onPreExecute() {}
 
-	protected String doInBackground(String... arg0) {
+	protected String doInBackground(String... args) {
 		String content = "hola";
-		// do something
+		// args[0] - this is
+		// args[1] - this is
 		try {
-			URL url = new URL(arg0[0]);
+			URL url = new URL(args[0]);
 			try {
 				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 				conn.setRequestMethod("GET");
