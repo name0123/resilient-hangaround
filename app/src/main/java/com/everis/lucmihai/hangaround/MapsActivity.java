@@ -11,30 +11,25 @@ import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.nfc.Tag;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.StrictMode;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
 import com.everis.lucmihai.hangaround.maps.Connection;
-import com.facebook.FacebookSdk;
-import com.facebook.Profile;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.everis.lucmihai.hangaround.maps.PostConnection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -50,28 +45,19 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.holidaycheck.permissify.DialogText;
-import com.holidaycheck.permissify.PermissifyConfig;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.List;
 
 import butterknife.OnClick;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 import stanford.androidlib.SimpleActivity;
 
 public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteListener, OnMapReadyCallback,
@@ -96,6 +82,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
     private final String STOTAL = "TOTAL";
 	private JSONArray places;
 	private Connection conne;
+	private PostConnection pcon;
 
 
 	SupportMapFragment mapFrag;
@@ -168,6 +155,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				Manifest.permission.ACCESS_FINE_LOCATION)
 				== PackageManager.PERMISSION_GRANTED) {
 			LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+			enableGps();
+
 		}
 	}
 
@@ -262,7 +251,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 					// permission denied, boo! Disable the
 					// functionality that depends on this permission.
-					Toast.makeText(this, "permission denied", Toast.LENGTH_LONG).show();
+					Toast.makeText(this, "Permission denied: location features disabled!", Toast.LENGTH_LONG).show();
 				}
 				return;
 			}
@@ -272,6 +261,12 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 	}
 
+/*
+	@Override
+	public boolean onMyLocationButtonClick(){
+
+	}
+*/
 
 	@Override
 	public boolean onMarkerClick(Marker marker) {
@@ -311,6 +306,16 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
         }
         new getPlacesBackground().execute(url1);
     }
+	private class ValorFourId {
+		String uid;
+		String four_id;
+		Boolean ac;
+		Boolean wc;
+		Elev el;
+	}
+	private enum Elev{
+		HAS,HAS_NOT,NO_NEED
+	}
 
 	/**
 	 * Dialogs here
@@ -323,6 +328,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		final Spinner spWcAccess = (Spinner) alertLayout.findViewById(R.id.spwca);
 		final Spinner spElev = (Spinner) alertLayout.findViewById(R.id.spElev);
 		String placeCategory = "";
+		Log.d(TAG, " This is the marker: "+marker.toString());
+		Log.d(TAG, " This is the index: "+index);
+		Log.d(TAG, " This is places's length: "+places.length());
 		try{
 			JSONObject place = places.getJSONObject(index);
 			placeCategory = place.get("category").toString();
@@ -343,13 +351,13 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
         alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-	            ValorLatLong newValPlace = new ValorLatLong();
+	            ValorFourId newValPlace = new ValorFourId();
+
 	            // break here; print places, and print marker
 	            try{
 		            JSONObject place = places.getJSONObject(index);
 		            newValPlace.uid = "misho0stequer2@gmail.com"; // user_id: hardcoded provisional
-		            newValPlace.lat = Double.valueOf(place.getString("latitude"));
-		            newValPlace.lng = Double.valueOf(place.getString("longitude"));
+		            newValPlace.four_id = place.getString("four_id"); // or venue_id
 		            newValPlace.ac = Boolean.valueOf(spGenAccess.getSelectedItem().toString());
 		            newValPlace.wc = Boolean.valueOf(spWcAccess.getSelectedItem().toString());
 		            newValPlace.el = Elev.valueOf(spElev.getSelectedItem().toString());
@@ -408,9 +416,11 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 		try {
 			// testing coords: cs, if not go to four
-			String setValoCS = "https://mobserv.herokuapp.com/valorations/newcs";
-			PostOk connection = new PostOk();
-			String resp = connection.post(setValoCS, nvl);
+			String setValoCS = "https://mobserv.herokuapp.com/valorations/newfour";
+			String args[] = new String []{setValoCS,nvl};
+
+			new PostConnection(this).execute(args);
+			//String resp = connection.post(setValoCS, nvl);
 			// TODO: change marker here!
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -418,36 +428,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	}
 
 
-	private void gpsRequestDialog(){
-		// TODO: use this function!
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
-                this);
-
-        // set title
-        alertDialogBuilder.setTitle("GPS request");
-
-        // set dialog message
-        alertDialogBuilder
-				.setMessage("GPS is not enabled, would you like to enable it?")
-                .setCancelable(false)
-                .setPositiveButton("Yes",new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog,int id) {
-                        // if this button is clicked, close
-	                    enableGps();
-                    }
-                })
-                .setNegativeButton("No",new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        // if this button is clicked, just close
-                        // the dialog box and do nothing
-                        dialog.cancel();
-                    }
-                });
-
-        AlertDialog alertDialog = alertDialogBuilder.create();
-        alertDialog.show();
-
-    }
     private void showUserValorationOptions(Marker marker){
         // I need to get the index of the place pointed by the marker
 	    String title = marker.getTitle();
@@ -554,6 +534,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
         protected void onPostExecute(JSONArray result) {
 			Dialog.dismiss();
+	        places = null;
             if(result != null) {
 	            places = result;
 	            go();
@@ -564,40 +545,11 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
             }
         }
     }
-	private class PostOk {
-		public final MediaType JSON
-				= MediaType.parse("application/json; charset=utf-8");
 
-		OkHttpClient client = new OkHttpClient();
-
-		String post(String url, String json) throws IOException {
-			Log.d(TAG,' '+url+' '+ json.toString());
-			RequestBody body = RequestBody.create(JSON, json);
-			Request request = new Request.Builder()
-					.url(url)
-					.post(body)
-					.build();
-			try (Response response = client.newCall(request).execute()) {
-				return response.body().string();
-			}
-		}
-	}
-	@JsonPropertyOrder({"uid","lat","lng","ac","wc","el"})
-	private class ValorLatLong {
-		String uid;
-		Double lat;
-		Double lng;
-		Boolean ac;
-		Boolean wc;
-		Elev el;
-	}
-	private enum Elev{
-		HAS,HAS_NOT,NO_NEED
-	}
 
 
 	private LatLng minim(JSONArray places){
-
+// useless because of 4square - usefull if get places from /places/getall and
 		double lat = 0;
 		double lng = 0;
 
@@ -676,8 +628,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				String args[] = new String[] {surl, places.toString()};
 
 				//Toast.makeText(getBaseContext(), TAG+places.toString(), Toast.LENGTH_SHORT).show();
-				// TODO: this connection is problematic
-				//conne.execute(args);
+				// TODO: [solved] gets the adaptedLevel for the places from 4square
+				// has the same solution as pcon - postConnection! ;) :: solved
+				//new Connection(this).execute(args);
 				showPlaces(places);
 			}
 			else {

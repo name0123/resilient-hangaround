@@ -3,13 +3,22 @@ package com.everis.lucmihai.hangaround.maps;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+
 import org.json.JSONArray;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 /**
  * Created by lucmihai on 11/10/2016.
@@ -19,6 +28,7 @@ public class Connection extends AsyncTask<String, Process, String> {
 	private static final String TAG = "KarambaConnection";
 
 	private AsyncTaskCompleteListener<String> callback;
+
 
 	public Connection(AsyncTaskCompleteListener<String> cb) {
 		this.callback = cb;
