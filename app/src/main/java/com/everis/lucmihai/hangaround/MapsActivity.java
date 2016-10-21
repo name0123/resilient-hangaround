@@ -29,6 +29,7 @@ import android.widget.Toast;
 
 import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
 import com.everis.lucmihai.hangaround.maps.Connection;
+import com.everis.lucmihai.hangaround.maps.GetAdaptationConnection;
 import com.everis.lucmihai.hangaround.maps.PostConnection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.common.ConnectionResult;
@@ -80,9 +81,17 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
     private final String SUNADAPTED = "UNADAPTED";
     private final String SPARTIAL = "PARTIAL";
     private final String STOTAL = "TOTAL";
-	private JSONArray places;
-	private Connection conne;
-	private PostConnection pcon;
+
+	public JSONArray getPlaces() {
+		return places;
+	}
+
+	public void setPlaces(JSONArray places) {
+		this.places = places;
+	}
+
+	private JSONArray places = null;
+	private JSONArray placesVal = null;
 
 
 	SupportMapFragment mapFrag;
@@ -281,31 +290,23 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 
     public void getPlaces(double latitude, double longitude){
-        URL url1 = null;
-        try {
-            // YOU PROBABLY NEED TO CALL 4SQARE FROM HERE!
-            //url1 = new URL("https://mobserv.herokuapp.com/4square/search?ll=41.3830878006894,2.04654693603516&limit=50");
-            //url1 = new URL("https://mobserv.herokuapp.com/places/get?ll=41.3830878006894,2.04654693603516");
-            //url1 = new URL("https://mobserv.herokuapp.com/places/getall");
-            //url1 = new URL("https://mobserv.herokuapp.com/places/getcs?ll=41.3830878006894,2.04654693603516");
-            //url1 = new URL("https://mobserv.herokuapp.com/4square/search?near=near"); // you have the location
-            String fourSquareSearch = "https://mobserv.herokuapp.com/4square/search?ll=";
-            fourSquareSearch += Double.toString(latitude);
-            fourSquareSearch += ',';
-            fourSquareSearch += Double.toString(longitude);
-	        fourSquareSearch += "&radius=150";
-	        fourSquareSearch += "&limit=20";
 
-            //Toast.makeText(getBaseContext(), TAG+fourSquareSearch, Toast.LENGTH_SHORT).show();
-            Log.d(TAG,fourSquareSearch);
-            url1 = new URL(fourSquareSearch);
-
-
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        new getPlacesBackground().execute(url1);
+        // YOU PROBABLY NEED TO CALL 4SQARE FROM HERE!
+        //url1 = new URL("https://mobserv.herokuapp.com/4square/search?ll=41.3830878006894,2.04654693603516&limit=50");
+        //url1 = new URL("https://mobserv.herokuapp.com/places/get?ll=41.3830878006894,2.04654693603516");
+        //url1 = new URL("https://mobserv.herokuapp.com/places/getall");
+        //url1 = new URL("https://mobserv.herokuapp.com/places/getcs?ll=41.3830878006894,2.04654693603516");
+        //url1 = new URL("https://mobserv.herokuapp.com/4square/search?near=near"); // you have the location
+        String fourSquareSearch = "https://mobserv.herokuapp.com/4square/search?ll=";
+        fourSquareSearch += Double.toString(latitude);
+        fourSquareSearch += ',';
+        fourSquareSearch += Double.toString(longitude);
+        fourSquareSearch += "&radius=150";
+        fourSquareSearch += "&limit=20";
+        Log.d(TAG,fourSquareSearch);
+        new Connection(this).execute(fourSquareSearch);
     }
+
 	private class ValorFourId {
 		String uid;
 		String four_id;
@@ -364,7 +365,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		            ObjectMapper mapper = new ObjectMapper();
 		            //Object to JSON in String
 		            String newValPlaceJson = mapper.writeValueAsString(newValPlace);
-		            updatePlaceAdaptedLevel(newValPlaceJson);
+		            votePlace(newValPlaceJson,place.getString("four_id"));
 
 	            }catch (Exception e){
 		            // TODO: handling needed!
@@ -383,13 +384,14 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		View alertLayout = inflater.inflate(R.layout.place_valoration_dialog, null);
 
 		String placeCategory = "";
-		try{
-			JSONObject place = places.getJSONObject(index);
-			placeCategory = place.get("category").toString();
-		} catch (Exception  e){
-			e.printStackTrace();
+		if(places.length() > 0) {
+			try {
+				JSONObject place = places.getJSONObject(index);
+				placeCategory = place.get("category").toString();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
-
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
 		alert.setTitle(placeCategory + ": " + marker.getTitle());
 		alert.setView(alertLayout);
@@ -412,12 +414,12 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		dialog.getWindow().setBackgroundDrawableResource(android.R.color.holo_blue_dark);
 
 	}
-	private void updatePlaceAdaptedLevel(String nvl) {
+	private void votePlace(String nvl, String four_id) {
 
 		try {
-			// testing coords: cs, if not go to four
-			String setValoCS = "https://mobserv.herokuapp.com/valorations/newfour";
-			String args[] = new String []{setValoCS,nvl};
+			String setValofd = "https://mobserv.herokuapp.com/valorations/newfour";
+			//setValofd += four_id
+			String args[] = new String []{setValofd,nvl};
 
 			new PostConnection(this).execute(args);
 			//String resp = connection.post(setValoCS, nvl);
@@ -441,7 +443,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			    e.printStackTrace();
 		    }
 	    }
-	    showPlaceValorationDialog(marker, index);
+	    if(index != -1) showPlaceValorationDialog(marker, index);
     }
 
     private void showGuestOptions(){
@@ -478,75 +480,48 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
     }
 
+
 	@Override
-	public void onTaskComplete(Object result, int number) {
-		String res = (String) result;
-		Log.d(TAG, res);
-	}
-
-	private class getPlacesBackground extends AsyncTask<URL, Integer, JSONArray> {
-		private ProgressDialog Dialog = new ProgressDialog(MapsActivity.this);
-
-		@Override
-		protected void onPreExecute()
-		{
-			Dialog.setMessage("Loading places ...");
-			Dialog.show();
+	public void onGetPlacesComplete(JSONArray result, int number) {
+		if(result != null) {
+			Log.d(TAG, "onGetPlacesComplete: "+result);
+			places = result;
+			go();
+		}
+		else{
+			Log.d(TAG, "onTaskComplete: "+result.getClass());
 		}
 
-		protected JSONArray doInBackground(URL... urls) {
 
-            try {
-                HttpURLConnection conn = (HttpURLConnection) urls[0].openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("Accept", "application/json");
-                int respCode = conn.getResponseCode();
-
-                if (respCode != 200) {
-                    Log.d(TAG, (String)"Errores:" + respCode);
-
-                } else {
-                    // responseCode = 200!
-                    String line;
-                    StringBuilder sb = new StringBuilder();
-                    BufferedReader rd = new BufferedReader(new InputStreamReader(
-                            (conn.getInputStream())));
-                    try {
-                        while ((line = rd.readLine()) != null) {
-                            sb.append(line);
-                        }
-                        rd.close();
-
-
-                    }catch (Exception e) {
-                        return null;
-                    }
-                    JSONArray json = new JSONArray(sb.toString());
-                    publishProgress();
-                    return json;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-
-        protected void onPostExecute(JSONArray result) {
-			Dialog.dismiss();
-	        places = null;
-            if(result != null) {
-	            places = result;
-	            go();
-            }
-            else{
-	            Toast.makeText(getBaseContext(), TAG+" No places found!", Toast.LENGTH_SHORT).show();
-                // no places found, to be handled
-            }
-        }
+		//Log.d(TAG, "burla numero 1: "+res);
     }
+	@Override
+	public void onGetAdaptationComplete(String result, int number){
+		// result contains adaptation,four_id level for a place!
 
+		Log.d(TAG, " GETting adaption levels: RESULT VIEW: "+result);
+		String[] adaptIndex = result.split(",");
+		// the result is a full json... BUGGY BUGGY! ADAPTED LEVEL IS NOT WELL STORED:
+		//OUTPUT TO HELP IN NOTEPAD++
 
+		try {
+			int index = Integer.parseInt(adaptIndex[6]);
+			JSONObject place = (JSONObject) places.get(index);
+			place.put("adaptedLevel", adaptIndex[0]);
+			places.put(place);
+			Log.d(TAG, " Trying hard: "+places.toString());
+
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void onVotedPlace(JSONArray result, int number) {
+		// on place voted!
+	}
 
 	private LatLng minim(JSONArray places){
 // useless because of 4square - usefull if get places from /places/getall and
@@ -601,7 +576,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
             startActivity(intent);
         }
     }
-	private void go(){
+	public void go(){
 		/**
 		 * we came here from postExecuteGett places
 		 * If lat & long != 0 (somewhere near Guinee Golf)
@@ -610,62 +585,53 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		 * At least one place in places!
 		 */
 
-		Criteria criteria = new Criteria();
-
-		try {
-			double lat = ((JSONObject) places.get(0)).getDouble("latitude");
-			double lng = ((JSONObject) places.get(0)).getDouble("longitude");
-			LatLng firstPlace = new LatLng(lat,lng);
-			int j = places.length()-1;
-			if(j > 0 ){
-				// more than a place
-				firstPlace = minim(places);
-				LatLng secondPlace = maxim(places);
-				LatLngBounds llb = new LatLngBounds(firstPlace,secondPlace);
-				Toast.makeText(getBaseContext(), TAG+" more places "+j, Toast.LENGTH_SHORT).show();
-				mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(llb,60));
-				String surl = "https://mobserv.herokuapp.com/places/getfour?id=";
-				String args[] = new String[] {surl, places.toString()};
-
-				//Toast.makeText(getBaseContext(), TAG+places.toString(), Toast.LENGTH_SHORT).show();
-				// TODO: [solved] gets the adaptedLevel for the places from 4square
-				// has the same solution as pcon - postConnection! ;) :: solved
-				//new Connection(this).execute(args);
-				showPlaces(places);
-			}
-			else {
-				// there is just one place
-				Toast.makeText(getBaseContext(),"Just one dude!", Toast.LENGTH_SHORT).show();
-				mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(firstPlace,10f));
+		if(places.length() > 0) {
+		// checking places has new values!
+			try {
+				double lat = ((JSONObject) places.get(0)).getDouble("latitude");
+				double lng = ((JSONObject) places.get(0)).getDouble("longitude");
+				LatLng firstPlace = new LatLng(lat, lng);
+				int j = places.length() - 1;
+				if (j > 0) {
+					// more than a place
+					firstPlace = minim(places);
+					LatLng secondPlace = maxim(places);
+					LatLngBounds llb = new LatLngBounds(firstPlace, secondPlace);
+					mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(llb, 60));
+					showPlaces();
+				} else {
+					// there is just one place
+					Toast.makeText(getBaseContext(), "Just one dude!", Toast.LENGTH_SHORT).show();
+					mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(firstPlace, 10f));
+				}
+			} catch (Exception e) {
+				Toast.makeText(getBaseContext(), " No place found", Toast.LENGTH_SHORT).show();
+				e.printStackTrace();
 			}
 		}
-		catch (Exception e){
-			Toast.makeText(getBaseContext(), " No place found", Toast.LENGTH_SHORT).show();
-			e.printStackTrace();
+		else {
+			Log.d(TAG, "Aun no hay sitios: places = null");
 		}
 	}
 
-	private void showPlaces(JSONArray places){
-		try {
-			for(int i = 0; i < places.length(); ++i){
-				JSONObject place = (JSONObject)places.get(i);
-				showMarker(place);
-			}
-
-		} catch (JSONException e) {
-			e.printStackTrace();
+	private void showPlaces(){
+		for(int i = 0; i < places.length(); ++i){
+			showMarker(i);
 		}
+
 	}
-	private void showMarker(JSONObject place) {
+	private void showMarker(int i) {
 		double lat = 0.0;
 		double lng = 0.0;
-		String adaptationLevel ="";
+
+		String adaptationLevel ="UNKNOWN";
 		String placeName="";
 		try {
+			JSONObject place = (JSONObject) places.get(i);
 			lat = place.getDouble("latitude");
 			lng = place.getDouble("longitude");
 			// to be switched
-			adaptationLevel = place.getString("adaptedLevel");
+			adaptationLevel = getAdaptationLevel(i);
 			placeName = place.getString("name");
 		} catch (JSONException e) {
 			e.printStackTrace();
@@ -703,6 +669,21 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			);
 		}
 	}
+
+	private String getAdaptationLevel(int i) {
+		String surl = "https://mobserv.herokuapp.com/places/getfour?id=";
+		Log.d(TAG, " GETting adaption level 0 try:..."+i);
+		try {
+			Log.d(TAG, " GETting adaption level 01..."+places.get(i).toString());
+			String args[] = new String[]{surl, places.get(i).toString(), String.valueOf(i)};
+			new GetAdaptationConnection(this).execute(args);
+		}
+		catch (Exception e){
+			e.printStackTrace();
+		}
+		return "UNKNOWN";
+	}
+
 	@Override
 	protected void onStart(){
 		super.onStart();

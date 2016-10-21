@@ -7,6 +7,8 @@ import android.util.Log;
 import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
+import org.json.JSONArray;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -75,10 +77,10 @@ public  class PostConnection extends AsyncTask<String, Process, String> {
 	}
 
 
-	protected void onPostExecute(String content) {
+	protected void onPostExecute(JSONArray content) {
 		// TODO: check this number!
 		int number = 2;
 		if (callback != null)
-			callback.onTaskComplete(content,number);
+			callback.onVotedPlace(content,number);
 	}
 }

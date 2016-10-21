@@ -1,5 +1,7 @@
 package com.everis.lucmihai.hangaround.maps;
 
+import org.json.JSONArray;
+
 /**
  * Created by lucmihai on 11/10/2016.
  * This is frome here: http://stackoverflow.com/questions/28854875/java-asynctask-passing-variable-to-main-thread/28855151#28855151
@@ -7,7 +9,9 @@ package com.everis.lucmihai.hangaround.maps;
  *
  */
 
-public interface AsyncTaskCompleteListener<T> {
-	public void onTaskComplete(T result, int number);
+public interface AsyncTaskCompleteListener<JSONArray> {
+	void onGetPlacesComplete(org.json.JSONArray result, int number);
+	void onGetAdaptationComplete(String result, int number);
+	void onVotedPlace(org.json.JSONArray result, int number);
 
 }

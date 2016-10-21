@@ -3,6 +3,7 @@ package com.everis.lucmihai.hangaround.maps;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.everis.lucmihai.hangaround.MapsActivity;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import org.json.JSONArray;
@@ -13,7 +14,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Map;
 
+import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -22,9 +25,14 @@ import okhttp3.Response;
 
 /**
  * Created by lucmihai on 11/10/2016.
+ * This is a get connection unit,
+ * args[0]  = url
+ * args[1 ...]  = url's parameters, 1 so far!
+ *
  */
 
-public class Connection extends AsyncTask<String, Process, String> {
+public class Connection extends AsyncTask<String, Process, JSONArray> {
+	private JSONArray places;
 	private static final String TAG = "KarambaConnection";
 
 	private AsyncTaskCompleteListener<String> callback;
@@ -36,53 +44,35 @@ public class Connection extends AsyncTask<String, Process, String> {
 
 	protected void onPreExecute() {}
 
-	protected String doInBackground(String... args) {
-		String content = "hola";
-		// args[0] - this is
-		// args[1] - this is
+	protected JSONArray doInBackground(String... args) {
+		OkHttpClient client = new OkHttpClient();
+		JSONArray result = new JSONArray();
+		String url = args[0];
+		if(args.length > 1){
+			url += args[1];
+		}
+		Log.d(TAG, " before error: "+url);
+		Request request = new Request.Builder()
+				.url(url)
+				.build();
+		Response response = null;
 		try {
-			URL url = new URL(args[0]);
-			try {
-				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-				conn.setRequestMethod("GET");
-				conn.setRequestProperty("Accept", "application/json");
-				int respCode = conn.getResponseCode();
-
-				if (respCode != 200) {
-					Log.d(TAG, (String)"Errores:" + respCode);
-
-				} else {
-					// responseCode = 200! - this should be only a line of  answer
-					String line;
-					StringBuilder sb = new StringBuilder();
-					BufferedReader rd = new BufferedReader(new InputStreamReader(
-							(conn.getInputStream())));
-					try {
-						while ((line = rd.readLine()) != null) {
-							sb.append(line);
-						}
-						rd.close();
-
-
-					}catch (Exception e) {
-						return null;
-					}
-					return sb.toString();
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			return null;
-		} catch (MalformedURLException e) {
+			response = client.newCall(request).execute();
+			result = new JSONArray(response.body().string());
+		} catch (Exception e) {
+			Log.d(TAG, "Error connection: ");
 			e.printStackTrace();
 		}
-		return content;
+		return result;
 	}
 
-	protected void onPostExecute(String content) {
+	protected void onPostExecute(JSONArray places) {
 		// TODO: check this number!
-		int number = 2;
-		if (callback != null)
-			callback.onTaskComplete(content,number);
+//		Log.d(TAG, "burla numero 2"+places.length());
+		int number = 11;
+		if (callback != null) {
+			if(places != null) callback.onGetPlacesComplete(places,number);
+
+		}
 	}
 }

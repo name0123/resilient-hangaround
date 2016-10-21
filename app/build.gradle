@@ -45,5 +45,6 @@ dependencies {
     compile 'com.fasterxml.jackson.core:jackson-annotations:2.7.3'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.7.3'
     compile 'com.holidaycheck:permissify:1.0.0'
+    compile group: 'com.google.code.gson', name: 'gson', version: '1.7.2'
 
 }
