@@ -25,6 +25,7 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
@@ -34,6 +35,7 @@ import com.everis.lucmihai.hangaround.maps.PostConnection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.FusedLocationProviderApi;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -65,22 +67,23 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		GoogleApiClient.ConnectionCallbacks,
 		GoogleApiClient.OnConnectionFailedListener,
 		GoogleMap.OnMarkerClickListener,
+		GoogleMap.OnMyLocationButtonClickListener,
 		LocationListener {
 
-    private GoogleMap mGoogleMap;
+	private GoogleMap mGoogleMap;
 	private SupportMapFragment mapFragment;
 	private Geocoder geocoder;
-    private Context context;
-    private boolean loggedIn = false; // too hard coded!
-    private static final String TAG = "KarambaMaps";
-    private final Float CTOTAL = BitmapDescriptorFactory.HUE_GREEN;
-    private final Float CPARTIAL = BitmapDescriptorFactory.HUE_YELLOW;
-    private final Float CUNADAPTED = BitmapDescriptorFactory.HUE_AZURE;
-    private final Float CUNKNOWN = BitmapDescriptorFactory.HUE_CYAN;
-    private final String SUNKNOWN = "UNKNOWN";
-    private final String SUNADAPTED = "UNADAPTED";
-    private final String SPARTIAL = "PARTIAL";
-    private final String STOTAL = "TOTAL";
+	private Context context;
+	private boolean loggedIn = false; // too hard coded!
+	private static final String TAG = "KarambaMaps";
+	private final Float CTOTAL = BitmapDescriptorFactory.HUE_GREEN;
+	private final Float CPARTIAL = BitmapDescriptorFactory.HUE_YELLOW;
+	private final Float CUNADAPTED = BitmapDescriptorFactory.HUE_RED;
+	private final Float CUNKNOWN = BitmapDescriptorFactory.HUE_CYAN;
+	private final String SUNKNOWN = "UNKNOWN";
+	private final String SUNADAPTED = "UNADAPTED";
+	private final String SPARTIAL = "PARTIAL";
+	private final String STOTAL = "TOTAL";
 
 	public JSONArray getPlaces() {
 		return places;
@@ -101,8 +104,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	Marker mCurrLocationMarker;
 
 	@Override
-	protected void onCreate(Bundle savedInstanceState)
-	{
+	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
 
@@ -125,24 +127,20 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	}
 
 	@Override
-	public void onMapReady(GoogleMap googleMap)
-	{
-		mGoogleMap=googleMap;
+	public void onMapReady(GoogleMap googleMap) {
+		mGoogleMap = googleMap;
 		mGoogleMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
 		mGoogleMap.setOnMarkerClickListener(this);
 		//Initialize Google Play Services
+		buildGoogleApiClient();
 		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+
 			if (ContextCompat.checkSelfPermission(this,
 					Manifest.permission.ACCESS_FINE_LOCATION)
 					== PackageManager.PERMISSION_GRANTED) {
-				buildGoogleApiClient();
 				mGoogleMap.setMyLocationEnabled(true);
 			}
-		}
-		else {
-			buildGoogleApiClient();
-			mGoogleMap.setMyLocationEnabled(true);
-		}
+		} else mGoogleMap.setMyLocationEnabled(true);
 	}
 
 	protected synchronized void buildGoogleApiClient() {
@@ -156,6 +154,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 	@Override
 	public void onConnected(Bundle bundle) {
+		final LocationManager manager = (LocationManager) getSystemService(Context.LOCATION_SERVICE );
 		mLocationRequest = new LocationRequest();
 		mLocationRequest.setInterval(1000);
 		mLocationRequest.setFastestInterval(1000);
@@ -164,20 +163,20 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				Manifest.permission.ACCESS_FINE_LOCATION)
 				== PackageManager.PERMISSION_GRANTED) {
 			LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
-			enableGps();
-
+			if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER )) showGpsEnable();
 		}
 	}
 
 	@Override
-	public void onConnectionSuspended(int i) {}
+	public void onConnectionSuspended(int i) {
+	}
 
 	@Override
-	public void onConnectionFailed(ConnectionResult connectionResult) {}
+	public void onConnectionFailed(ConnectionResult connectionResult) {
+	}
 
 	@Override
-	public void onLocationChanged(Location location)
-	{
+	public void onLocationChanged(Location location) {
 		mLastLocation = location;
 		if (mCurrLocationMarker != null) {
 			mCurrLocationMarker.remove();
@@ -202,7 +201,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	}
 
 	public static final int MY_PERMISSIONS_REQUEST_LOCATION = 99;
-	public boolean checkLocationPermission(){
+
+	public boolean checkLocationPermission() {
 		if (ContextCompat.checkSelfPermission(this,
 				Manifest.permission.ACCESS_FINE_LOCATION)
 				!= PackageManager.PERMISSION_GRANTED) {
@@ -270,13 +270,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 	}
 
-/*
-	@Override
-	public boolean onMyLocationButtonClick(){
-
-	}
-*/
-
 	@Override
 	public boolean onMarkerClick(Marker marker) {
 		//TODO: figure this out: you show the vote button if user
@@ -289,23 +282,45 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	}
 
 
-    public void getPlaces(double latitude, double longitude){
+	public void getPlaces(double latitude, double longitude) {
 
-        // YOU PROBABLY NEED TO CALL 4SQARE FROM HERE!
-        //url1 = new URL("https://mobserv.herokuapp.com/4square/search?ll=41.3830878006894,2.04654693603516&limit=50");
-        //url1 = new URL("https://mobserv.herokuapp.com/places/get?ll=41.3830878006894,2.04654693603516");
-        //url1 = new URL("https://mobserv.herokuapp.com/places/getall");
-        //url1 = new URL("https://mobserv.herokuapp.com/places/getcs?ll=41.3830878006894,2.04654693603516");
-        //url1 = new URL("https://mobserv.herokuapp.com/4square/search?near=near"); // you have the location
-        String fourSquareSearch = "https://mobserv.herokuapp.com/4square/search?ll=";
-        fourSquareSearch += Double.toString(latitude);
-        fourSquareSearch += ',';
-        fourSquareSearch += Double.toString(longitude);
-        fourSquareSearch += "&radius=150";
-        fourSquareSearch += "&limit=20";
-        Log.d(TAG,fourSquareSearch);
-        new Connection(this).execute(fourSquareSearch);
-    }
+		// YOU PROBABLY NEED TO CALL 4SQARE FROM HERE!
+		//url1 = new URL("https://mobserv.herokuapp.com/4square/search?ll=41.3830878006894,2.04654693603516&limit=50");
+		//url1 = new URL("https://mobserv.herokuapp.com/places/get?ll=41.3830878006894,2.04654693603516");
+		//url1 = new URL("https://mobserv.herokuapp.com/places/getall");
+		//url1 = new URL("https://mobserv.herokuapp.com/places/getcs?ll=41.3830878006894,2.04654693603516");
+		//url1 = new URL("https://mobserv.herokuapp.com/4square/search?near=near"); // you have the location
+		String fourSquareSearch = "https://mobserv.herokuapp.com/4square/search?ll=";
+		fourSquareSearch += Double.toString(latitude);
+		fourSquareSearch += ',';
+		fourSquareSearch += Double.toString(longitude);
+		fourSquareSearch += "&radius=150";
+		fourSquareSearch += "&limit=20";
+		Log.d(TAG, fourSquareSearch);
+		new Connection(this).execute(fourSquareSearch);
+	}
+
+	@Override
+	public boolean onMyLocationButtonClick() {
+
+		Log.d(TAG, "Hello today we going here!");
+		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+			// TODO: Consider calling
+			//    ActivityCompat#requestPermissions
+			// here to request the missing permissions, and then overriding
+			//   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+			//                                          int[] grantResults)
+			// to handle the case where the user grants the permission. See the documentation
+			// for ActivityCompat#requestPermissions for more details.
+		}
+		Log.d(TAG, "Hello today we going here!");
+		Location location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+		Log.d(TAG, "Hello today we going here: "+location.toString());
+		double latitude = location.getLatitude();
+		double longitude = location.getLongitude();
+		getPlaces(latitude, longitude);
+		return true;
+	}
 
 	private class ValorFourId {
 		String uid;
@@ -365,14 +380,13 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		            ObjectMapper mapper = new ObjectMapper();
 		            //Object to JSON in String
 		            String newValPlaceJson = mapper.writeValueAsString(newValPlace);
-		            votePlace(newValPlaceJson,place.getString("four_id"));
+		            votePlace(newValPlaceJson,place.getString("four_id"),index);
 
 	            }catch (Exception e){
 		            // TODO: handling needed!
 		            e.printStackTrace();
 		            Log.d(TAG," ahora hay un problema grodo!");
 	            }
-
             }
         });
         AlertDialog dialog = alert.create();
@@ -382,12 +396,13 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public void showPlaceValorationDialog(final Marker marker, final int index) {
 		LayoutInflater inflater = getLayoutInflater();
 		View alertLayout = inflater.inflate(R.layout.place_valoration_dialog, null);
-
+		TextView adaptedLevel = (TextView)alertLayout.findViewById(R.id.tvga);
 		String placeCategory = "";
 		if(places.length() > 0) {
 			try {
 				JSONObject place = places.getJSONObject(index);
 				placeCategory = place.get("category").toString();
+				adaptedLevel.setText(place.getString("adaptedLevel"));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -395,6 +410,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
 		alert.setTitle(placeCategory + ": " + marker.getTitle());
 		alert.setView(alertLayout);
+
 		alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
@@ -414,13 +430,35 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		dialog.getWindow().setBackgroundDrawableResource(android.R.color.holo_blue_dark);
 
 	}
-	private void votePlace(String nvl, String four_id) {
+	private void setLevelForPlace(Integer index, String nvl){
+		// TODO: debugg NO_NEED - still
+		Log.i(TAG, "Level debug: "+nvl);
+		Boolean a,w,e;
+		a = w = e = false;
+		String el = "";
+		try{
+			JSONObject level = new JSONObject(nvl);
+			a = level.getBoolean("ac");
+			w = level.getBoolean("wc");
+			el = level.getString("el");
+			if(el.equals("HAS") || (e.equals("NO_NEED"))) e = true;
+			JSONObject place = (JSONObject) places.get(index);
+			if(a&&w&&e) place.put("adaptedLevel", "TOTAL");
+			else if(a||w||e) place.put("adaptedLevel", "PARTIAL");
+			else place.put("adaptedLevel", "UNADAPTED");
+			places.put(place);
+		}catch (Exception ex){
+			ex.printStackTrace();
+		}
+	}
+	private void votePlace(String nvl, String four_id, Integer index) {
 
 		try {
 			String setValofd = "https://mobserv.herokuapp.com/valorations/newfour";
 			//setValofd += four_id
 			String args[] = new String []{setValofd,nvl};
-
+			setLevelForPlace(index,nvl);
+			showMarker(index);
 			new PostConnection(this).execute(args);
 			//String resp = connection.post(setValoCS, nvl);
 			// TODO: change marker here!
@@ -428,7 +466,29 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			e.printStackTrace();
 		}
 	}
+	public void showGpsEnable() {
+		LayoutInflater inflater = getLayoutInflater();
+		View alertLayout = inflater.inflate(R.layout.gps_dialog, null);
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		alert.setTitle("Enable GPS");
+		alert.setView(alertLayout);
+		alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				//Toast.makeText(getBaseContext(), "Cancel clicked", Toast.LENGTH_SHORT).show();
+			}
+		});
 
+		alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				enableGps();
+
+			}
+		});
+		AlertDialog dialog = alert.create();
+		dialog.show();
+	}
 
     private void showUserValorationOptions(Marker marker){
         // I need to get the index of the place pointed by the marker
@@ -486,6 +546,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		if(result != null) {
 			Log.d(TAG, "onGetPlacesComplete: "+result);
 			places = result;
+			for(int i = 0; i<places.length(); i++){
+				getAdaptationLevel(i);
+			}
 			go();
 		}
 		else{
@@ -499,23 +562,30 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public void onGetAdaptationComplete(String result, int number){
 		// result contains adaptation,four_id level for a place!
 
-		Log.d(TAG, " GETting adaption levels: RESULT VIEW: "+result);
+		Log.d(TAG, " Adapted level got: "+result);
 		String[] adaptIndex = result.split(",");
 		// the result is a full json... BUGGY BUGGY! ADAPTED LEVEL IS NOT WELL STORED:
 		//OUTPUT TO HELP IN NOTEPAD++
 
 		try {
+			//why adaptIndex should be an int?
+			// because is the number of de index attached at the json we search
 			int index = Integer.parseInt(adaptIndex[6]);
 			JSONObject place = (JSONObject) places.get(index);
-			place.put("adaptedLevel", adaptIndex[0]);
+			String al = adaptIndex[5]; // "adaptedLevel":"UNKNOWN"};
+			al = al.split(":")[1];
+			al = al.replace("\"", "");
+			al = al.replace("}", "");
+			place.put("adaptedLevel", al);
 			places.put(place);
-			Log.d(TAG, " Trying hard: "+places.toString());
+			Log.d(TAG, " Trying hard: "+places.get(index).toString());
 
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace();
 		}
+		showPlaces();
 	}
 
 	@Override
@@ -598,7 +668,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 					LatLng secondPlace = maxim(places);
 					LatLngBounds llb = new LatLngBounds(firstPlace, secondPlace);
 					mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(llb, 60));
-					showPlaces();
 				} else {
 					// there is just one place
 					Toast.makeText(getBaseContext(), "Just one dude!", Toast.LENGTH_SHORT).show();
@@ -615,6 +684,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	}
 
 	private void showPlaces(){
+		// this is called after getting the addptedLevel for every place in places - on get done! in go.
 		for(int i = 0; i < places.length(); ++i){
 			showMarker(i);
 		}
@@ -630,8 +700,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			JSONObject place = (JSONObject) places.get(i);
 			lat = place.getDouble("latitude");
 			lng = place.getDouble("longitude");
-			// to be switched
-			adaptationLevel = getAdaptationLevel(i);
+			adaptationLevel = place.getString("adaptedLevel");
 			placeName = place.getString("name");
 		} catch (JSONException e) {
 			e.printStackTrace();
@@ -643,6 +712,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			Marker placeMarker = mGoogleMap.addMarker(new MarkerOptions()
 					.position(placeLocation)
 					.icon(BitmapDescriptorFactory.defaultMarker(CUNKNOWN))
+					.alpha(0.01f)
+					.rotation(0.5f)
 					.title(placeName)
 			);
 		}
@@ -650,7 +721,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		else if(adaptationLevel.equals(STOTAL)) {
 			Marker placeMarker = mGoogleMap.addMarker(new MarkerOptions()
 					.position(placeLocation)
-					.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+					.icon(BitmapDescriptorFactory.defaultMarker(CTOTAL))
 					.title(placeName)
 			);
 		}
@@ -672,9 +743,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 	private String getAdaptationLevel(int i) {
 		String surl = "https://mobserv.herokuapp.com/places/getfour?id=";
-		Log.d(TAG, " GETting adaption level 0 try:..."+i);
 		try {
-			Log.d(TAG, " GETting adaption level 01..."+places.get(i).toString());
+			Log.d(TAG, " Getting adaption level for: "+places.get(i).toString());
 			String args[] = new String[]{surl, places.get(i).toString(), String.valueOf(i)};
 			new GetAdaptationConnection(this).execute(args);
 		}

@@ -71,7 +71,7 @@ public class GetAdaptationConnection extends AsyncTask<String, Process, String> 
 	protected void onPostExecute(String adaptation) {
 		// TODO: check this number!
 		// adaptation format: level,four_id
-		Log.d(TAG, "burla numero 2"+adaptation);
+		//Log.d(TAG, "burla numero 2"+adaptation);
 		int number = 12;
 		if (callback != null) {
 			callback.onGetAdaptationComplete(adaptation,number);
