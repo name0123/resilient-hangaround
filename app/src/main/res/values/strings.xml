@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">HangAround</string>
-    <string name="title_activity_maps">HangAround</string>
+    <string name="app_name">Hangaround</string>
+    <string name="title_activity_maps">Hangaround</string>
 
 
     <string name="login">Login</string>
@@ -15,7 +15,7 @@
     <string name="location_deny_dialog">Sorry, we do not have permission to do that.</string>
     <string name="storage_rationale">Media permission required</string>
     <string name="storage_deny_dialog">Sorry, we do not have media permission.</string>
-    <string name="accept_terms">By voting you accept the terms of use of Hangaround. The main implication of this is that you visited the place at least once!</string>
+    <string name="accept_terms">By voting you accept the terms of use of Hangaround: you have visited the place!</string>
 
     <string-array
         name="elev_adapt_array">

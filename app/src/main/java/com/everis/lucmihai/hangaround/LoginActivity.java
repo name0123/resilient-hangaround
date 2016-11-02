@@ -38,7 +38,6 @@ public class LoginActivity extends Activity {
                 Intent intent = new Intent(context, MapsActivity.class);
                 AccessToken accessToken = AccessToken.getCurrentAccessToken();
                 String user = accessToken.getUserId();
-
                 intent.putExtra("logged", user);
                 startActivity(intent);
             }

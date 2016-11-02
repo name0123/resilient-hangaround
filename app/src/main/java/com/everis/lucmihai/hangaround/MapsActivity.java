@@ -74,6 +74,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private GoogleMap mGoogleMap;
 	private SupportMapFragment mapFragment;
 	private Geocoder geocoder;
+	private Location location;
 	private Context context;
 	private boolean loggedIn = false; // too hard coded!
 	private static final String TAG = "KarambaMaps";
@@ -86,6 +87,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private final String SPARTIAL = "PARTIAL";
 	private final String STOTAL = "TOTAL";
 
+	public MapsActivity() throws JSONException {
+	}
+
 	public JSONArray getPlaces() {
 		return places;
 	}
@@ -94,8 +98,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		this.places = places;
 	}
 
-	private JSONArray places = null;
-	private JSONArray placesVal = null;
+	private JSONArray places = new JSONArray("[]");
+	private JSONArray placesVal = new JSONArray("[]");
+	;
 
 
 	SupportMapFragment mapFrag;
@@ -108,11 +113,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
-
-		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-			checkLocationPermission();
-		}
-
 		mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		mapFrag.getMapAsync(this);
 	}
@@ -134,14 +134,17 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		mGoogleMap.setOnMarkerClickListener(this);
 		//Initialize Google Play Services
 		buildGoogleApiClient();
-		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 
+		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+			checkLocationPermission();
+			// TODO: show progress dialog enabling gps , searching for your possition and getPlaces
 			if (ContextCompat.checkSelfPermission(this,
-					Manifest.permission.ACCESS_FINE_LOCATION)
-					== PackageManager.PERMISSION_GRANTED) {
+					Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 				mGoogleMap.setMyLocationEnabled(true);
+				mGoogleMap.setOnMyLocationButtonClickListener(this);
 			}
-		} else mGoogleMap.setMyLocationEnabled(true);
+		} else mGoogleMap.setMyLocationEnabled(false);
+
 	}
 
 	protected synchronized void buildGoogleApiClient() {
@@ -164,7 +167,10 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				Manifest.permission.ACCESS_FINE_LOCATION)
 				== PackageManager.PERMISSION_GRANTED) {
 			LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
-			if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER )) showGpsEnable();
+			if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER )) {
+				showGpsEnable();
+
+			}
 		}
 	}
 
@@ -185,15 +191,16 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 		//Place current location marker
 		LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-		MarkerOptions markerOptions = new MarkerOptions();
+		/*MarkerOptions markerOptions = new MarkerOptions();
 		markerOptions.position(latLng);
 		markerOptions.title("Current Position");
 		markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
 		mCurrLocationMarker = mGoogleMap.addMarker(markerOptions);
-
+*/
 		//move map camera
 		mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
 		mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+		getPlaces(latLng.latitude, latLng.longitude);
 
 		//stop location updates
 		if (mGoogleApiClient != null) {
@@ -256,6 +263,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 						}
 						mGoogleMap.setMyLocationEnabled(true);
 					}
+					if(location != null) getPlaces(location.getLatitude(), location.getLongitude());
+					else Log.e(TAG,"location is null!");
 
 				} else {
 
@@ -297,30 +306,15 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		fourSquareSearch += Double.toString(longitude);
 		fourSquareSearch += "&radius=150";
 		fourSquareSearch += "&limit=20";
-		Log.d(TAG, fourSquareSearch);
+//		Log.d(TAG, fourSquareSearch);
 		new Connection(this).execute(fourSquareSearch);
 	}
 
 	@Override
 	public boolean onMyLocationButtonClick() {
 
-		Log.d(TAG, "Hello today we going here!");
-		if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-			// TODO: Consider calling
-			//    ActivityCompat#requestPermissions
-			// here to request the missing permissions, and then overriding
-			//   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-			//                                          int[] grantResults)
-			// to handle the case where the user grants the permission. See the documentation
-			// for ActivityCompat#requestPermissions for more details.
-		}
-		Log.d(TAG, "Hello today we going here!");
-		Location location = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-		Log.d(TAG, "Hello today we going here: "+location.toString());
-		double latitude = location.getLatitude();
-		double longitude = location.getLongitude();
-		getPlaces(latitude, longitude);
-		return true;
+		Log.d(TAG, "Is this just real life?");
+		return false;
 	}
 
 	private class ValorFourId {
@@ -568,7 +562,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public void onGetAdaptationComplete(String result, int number){
 		// result contains adaptation,four_id level for a place!
 
-		Log.d(TAG, " Adapted level got: "+result);
+		//Log.d(TAG, " Adapted level got: "+result);
 		String[] adaptIndex = result.split(",");
 		// the result is a full json... BUGGY BUGGY! ADAPTED LEVEL IS NOT WELL STORED:
 		//OUTPUT TO HELP IN NOTEPAD++
@@ -584,7 +578,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			al = al.replace("}", "");
 			place.put("adaptedLevel", al);
 			places.put(place);
-			Log.d(TAG, " Trying hard: "+places.get(index).toString());
+			//Log.d(TAG, " Trying hard: "+places.get(index).toString());
 
 		}
 		catch (Exception e)
@@ -750,7 +744,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private String getAdaptationLevel(int i) {
 		String surl = "https://mobserv.herokuapp.com/places/getfour?id=";
 		try {
-			Log.d(TAG, " Getting adaption level for: "+places.get(i).toString());
+			//Log.d(TAG, " Getting adaption level for: "+places.get(i).toString());
 			String args[] = new String[]{surl, places.get(i).toString(), String.valueOf(i)};
 			new GetAdaptationConnection(this).execute(args);
 		}
