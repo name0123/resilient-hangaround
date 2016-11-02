@@ -328,6 +328,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		Boolean ac;
 		Boolean wc;
 		Elev el;
+
 	}
 	private enum Elev{
 		HAS,HAS_NOT,NO_NEED
@@ -377,9 +378,11 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		            newValPlace.ac = Boolean.valueOf(spGenAccess.getSelectedItem().toString());
 		            newValPlace.wc = Boolean.valueOf(spWcAccess.getSelectedItem().toString());
 		            newValPlace.el = Elev.valueOf(spElev.getSelectedItem().toString());
+
+		            //Log.i(TAG,newValPlace.el.toString());
 		            ObjectMapper mapper = new ObjectMapper();
-		            //Object to JSON in String
 		            String newValPlaceJson = mapper.writeValueAsString(newValPlace);
+		            //Log.e(TAG, "Json stuff: "+newValPlaceJson.toString());
 		            votePlace(newValPlaceJson,place.getString("four_id"),index);
 
 	            }catch (Exception e){
@@ -431,8 +434,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 	}
 	private void setLevelForPlace(Integer index, String nvl){
-		// TODO: debugg NO_NEED - still
-		Log.i(TAG, "Level debug: "+nvl);
+		// TODO: debugg NO_NEED - complete!
+		//Log.i(TAG, "Level debug: "+nvl);
 		Boolean a,w,e;
 		a = w = e = false;
 		String el = "";
@@ -441,7 +444,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			a = level.getBoolean("ac");
 			w = level.getBoolean("wc");
 			el = level.getString("el");
-			if(el.equals("HAS") || (e.equals("NO_NEED"))) e = true;
+			if(el.equals("HAS") || el.equals("NO_NEED")) e = true;
 			JSONObject place = (JSONObject) places.get(index);
 			if(a&&w&&e) place.put("adaptedLevel", "TOTAL");
 			else if(a||w||e) place.put("adaptedLevel", "PARTIAL");
@@ -457,7 +460,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			String setValofd = "https://mobserv.herokuapp.com/valorations/newfour";
 			//setValofd += four_id
 			String args[] = new String []{setValofd,nvl};
+			//Log.e(TAG, "Place before: "+places);
 			setLevelForPlace(index,nvl);
+			//Log.e(TAG, "Place after : "+places);
 			showMarker(index);
 			new PostConnection(this).execute(args);
 			//String resp = connection.post(setValoCS, nvl);
