@@ -9,12 +9,13 @@
     <string name="search_hint">Search Places</string>
     <string name="search_settings">Search Places</string>
     <string name="turnOnLocationMessage">Please turn on your GPS</string>
-    <string name="facebook_app_id">817507255055936</string>
+    <string name="facebook_app_id">711282715680941</string>
     <string name="location_rationale">Location permission required</string>
     <string name="gps_request">To get places around your position you need to enable gps, would you like to enable it now?</string>
     <string name="location_deny_dialog">Sorry, we do not have permission to do that.</string>
     <string name="storage_rationale">Media permission required</string>
     <string name="storage_deny_dialog">Sorry, we do not have media permission.</string>
+    <string name="accept_terms">By voting you accept the terms of use of Hangaround. The main implication of this is that you visited the place at least once!</string>
 
     <string-array
         name="elev_adapt_array">

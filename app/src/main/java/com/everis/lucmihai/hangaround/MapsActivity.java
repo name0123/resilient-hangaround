@@ -15,6 +15,7 @@ import android.nfc.Tag;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -790,6 +791,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
     @OnClick(R.id.bsearch)
     public void onClickSearch(View view){
         // get the first address in text search - call GetPlaces()
+	    gettingPlacesProgressDialog();
 		InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         EditText searchedText = (EditText) findViewById(R.id.txtsearch);
@@ -811,5 +813,38 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
             e.printStackTrace();
         }
     }
+
+	private void gettingPlacesProgressDialog() {
+		final ProgressDialog barProgressDialog;
+		final Handler updateBarHandler = new Handler();
+		barProgressDialog = new ProgressDialog(MapsActivity.this);
+		barProgressDialog.setTitle("Getting places");
+		barProgressDialog.setMessage("We are searching places around this area");
+		barProgressDialog.setProgressStyle(barProgressDialog.STYLE_HORIZONTAL);
+		barProgressDialog.setProgress(0);
+		barProgressDialog.setMax(20);
+		barProgressDialog.show();
+
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					// time consuming task...
+					while (barProgressDialog.getProgress() <= barProgressDialog.getMax()) {
+						Thread.sleep(1000);
+						updateBarHandler.post(new Runnable() {
+							public void run() {
+								barProgressDialog.incrementProgressBy(3);
+							}
+						});
+						if (barProgressDialog.getProgress() == barProgressDialog.getMax()) {
+							barProgressDialog.dismiss();
+						}
+					}
+				} catch (Exception e) {
+				}
+			}
+		}).start();
+	}
 
 }

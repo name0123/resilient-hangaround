@@ -26,28 +26,20 @@ public class LoginActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         context = getApplicationContext();
         FacebookSdk.sdkInitialize(this);
         callbackManager = CallbackManager.Factory.create();
-
-        //try here
-        if(isLoggedIn()){
-            Intent intent = new Intent(context, MapsActivity.class);
-            intent.putExtra("logged", "user");
-            startActivity(intent);
-        }
-
         setContentView(R.layout.activity_login);
         info = (TextView)findViewById(R.id.info);
         loginButton = (LoginButton)findViewById(R.id.login_button);
-
-
         loginButton.registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
             @Override
             public void onSuccess(LoginResult loginResult) {
                 Intent intent = new Intent(context, MapsActivity.class);
-                intent.putExtra("logged", "user");
+                AccessToken accessToken = AccessToken.getCurrentAccessToken();
+                String user = accessToken.getUserId();
+
+                intent.putExtra("logged", user);
                 startActivity(intent);
             }
 
@@ -61,8 +53,6 @@ public class LoginActivity extends Activity {
                 info.setText("Login attempt failed.");
             }
         });
-
-
     }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -71,12 +61,15 @@ public class LoginActivity extends Activity {
 
     @OnClick(R.id.bcontinue)
     public void onClickContinue(View view){
-        Intent intent = new Intent(this, MapsActivity.class);
-        intent.putExtra("logged", "guest");
+		AccessToken accessToken = AccessToken.getCurrentAccessToken();
+	    Intent intent = new Intent(this, MapsActivity.class);
+	    if(accessToken != null){
+		    intent.putExtra("logged", "guest");
+	    }
         startActivity(intent);
     }
-    public boolean isLoggedIn() {
+/*    public boolean isLoggedIn() {
         AccessToken accessToken = AccessToken.getCurrentAccessToken();
         return accessToken != null;
-    }
+    }*/
 }
