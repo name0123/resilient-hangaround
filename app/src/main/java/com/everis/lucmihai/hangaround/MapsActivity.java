@@ -24,6 +24,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -126,17 +127,17 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		} else {
 			userLog= (String) savedInstanceState.getSerializable("logged");
 		}
-		if(!userLog.equals("guest")) loggedIn = true;
+		if(!userLog.equals("guest")) {
+			loggedIn = true;
+			Button lgnButton = (Button) findById(R.id.blogin);
+			lgnButton.setText("Welcome \n"+userLog);
+		}
+
 	}
 
 	@Override
 	public void onPause() {
 		super.onPause();
-
-		//stop location updates when Activity is no longer active
-		if (mGoogleApiClient != null) {
-			LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
-		}
 	}
 
 	@Override
@@ -146,14 +147,13 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		mGoogleMap.setOnMarkerClickListener(this);
 		//Initialize Google Play Services
 		buildGoogleApiClient();
-		mGoogleMap.setOnMyLocationButtonClickListener(this);
-		mGoogleMap.setMyLocationEnabled(true);
 		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 			checkLocationPermission();
 			// TODO: show progress dialog enabling gps , searching for your possition and getPlaces
 			if (ContextCompat.checkSelfPermission(this,
 					Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 				mGoogleMap.setMyLocationEnabled(true);
+				mGoogleMap.setOnMyLocationButtonClickListener(this);
 			}
 		} else mGoogleMap.setMyLocationEnabled(false);
 
@@ -585,9 +585,10 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		try {
 			//why adaptIndex should be an int?
 			// because is the number of de index attached at the json we search
-			int index = Integer.parseInt(adaptIndex[6]);
+			int i = adaptIndex.length;
+			int index = Integer.parseInt(adaptIndex[i-1]);
 			JSONObject place = (JSONObject) places.get(index);
-			String al = adaptIndex[5]; // "adaptedLevel":"UNKNOWN"};
+			String al = adaptIndex[i-2]; // "adaptedLevel":"UNKNOWN"};
 			al = al.split(":")[1];
 			al = al.replace("\"", "");
 			al = al.replace("}", "");

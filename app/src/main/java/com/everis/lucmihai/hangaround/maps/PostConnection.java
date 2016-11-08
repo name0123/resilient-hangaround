@@ -75,9 +75,6 @@ public  class PostConnection extends AsyncTask<String, Process, String> {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		finally {
-			response.body().close();
-		}
 		return "Post Connection null response back";
 	}
 
