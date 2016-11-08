@@ -44,12 +44,21 @@ public class LoginActivity extends Activity {
 
             @Override
             public void onCancel() {
-                info.setText("Login attempt canceled.");
+
+                info.setText("Login attempt canceled: Guest session initialized");
+                Intent intent = new Intent(context, MapsActivity.class);
+                String user = "guest";
+                intent.putExtra("logged", user);
+                startActivity(intent);
             }
 
             @Override
             public void onError(FacebookException e) {
-                info.setText("Login attempt failed.");
+                info.setText("Login attempt canceled: Guest session initialized");
+                Intent intent = new Intent(context, MapsActivity.class);
+                String user = "guest";
+                intent.putExtra("logged", user);
+                startActivity(intent);
             }
         });
     }

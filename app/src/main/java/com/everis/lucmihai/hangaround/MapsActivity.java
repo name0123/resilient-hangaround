@@ -32,6 +32,7 @@ import android.widget.Toast;
 import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
 import com.everis.lucmihai.hangaround.maps.Connection;
 import com.everis.lucmihai.hangaround.maps.GetAdaptationConnection;
+import com.everis.lucmihai.hangaround.maps.GetStart;
 import com.everis.lucmihai.hangaround.maps.PostConnection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.common.ConnectionResult;
@@ -115,6 +116,17 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		setContentView(R.layout.activity_maps);
 		mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		mapFrag.getMapAsync(this);
+		getStart(); // make the first call to wake up  API host, random call, no result taken
+		String userLog="guest";
+		if (savedInstanceState == null) {
+			Bundle extras = getIntent().getExtras();
+			if(extras != null) {
+				userLog= extras.getString("logged");
+			}
+		} else {
+			userLog= (String) savedInstanceState.getSerializable("logged");
+		}
+		if(!userLog.equals("guest")) loggedIn = true;
 	}
 
 	@Override
@@ -134,14 +146,14 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		mGoogleMap.setOnMarkerClickListener(this);
 		//Initialize Google Play Services
 		buildGoogleApiClient();
-
+		mGoogleMap.setOnMyLocationButtonClickListener(this);
+		mGoogleMap.setMyLocationEnabled(true);
 		if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 			checkLocationPermission();
 			// TODO: show progress dialog enabling gps , searching for your possition and getPlaces
 			if (ContextCompat.checkSelfPermission(this,
 					Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 				mGoogleMap.setMyLocationEnabled(true);
-				mGoogleMap.setOnMyLocationButtonClickListener(this);
 			}
 		} else mGoogleMap.setMyLocationEnabled(false);
 
@@ -312,8 +324,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 	@Override
 	public boolean onMyLocationButtonClick() {
-
 		Log.d(TAG, "Is this just real life?");
+		checkLocationPermission();
 		return false;
 	}
 
@@ -394,9 +406,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public void showPlaceValorationDialog(final Marker marker, final int index) {
 		LayoutInflater inflater = getLayoutInflater();
 		View alertLayout = inflater.inflate(R.layout.place_valoration_dialog, null);
-		TextView adaptedLevel = (TextView)alertLayout.findViewById(R.id.tvga);
+		TextView adaptedLevel = (TextView) alertLayout.findViewById(R.id.tvga);
 		String placeCategory = "";
-		if(places.length() > 0) {
+		if (places.length() > 0) {
 			try {
 				JSONObject place = places.getJSONObject(index);
 				placeCategory = place.get("category").toString();
@@ -420,9 +432,15 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			@Override
 			public void onClick(DialogInterface dialog, int which) {
 				// wanna vote the place!
-				showValorationDialog(marker, index);
+				if(loggedIn){
+					showValorationDialog(marker, index);
+				}
+				else{
+					Toast.makeText(getBaseContext(), "Only registered users can vote!", Toast.LENGTH_LONG).show();
+				}
 			}
 		});
+
 		AlertDialog dialog = alert.create();
 		dialog.show();
 		dialog.getWindow().setBackgroundDrawableResource(android.R.color.holo_blue_dark);
@@ -554,14 +572,11 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		else{
 			Log.d(TAG, "onTaskComplete: "+result.getClass());
 		}
-
-
-		//Log.d(TAG, "burla numero 1: "+res);
     }
+
 	@Override
 	public void onGetAdaptationComplete(String result, int number){
 		// result contains adaptation,four_id level for a place!
-
 		//Log.d(TAG, " Adapted level got: "+result);
 		String[] adaptIndex = result.split(",");
 		// the result is a full json... BUGGY BUGGY! ADAPTED LEVEL IS NOT WELL STORED:
@@ -680,6 +695,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		else {
 			Log.d(TAG, "Aun no hay sitios: places = null");
+			Toast.makeText(this, "Sorry: No places found!", Toast.LENGTH_LONG).show();
 		}
 	}
 
@@ -753,6 +769,17 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		return "UNKNOWN";
 	}
+	private String getStart() {
+		String surl = "https://mobserv.herokuapp.com/users/getall";
+		try {
+			String args[] = new String[]{surl};
+			new GetStart(this).execute(args);
+		}
+		catch (Exception e){
+			e.printStackTrace();
+		}
+		return "UNKNOWN";
+	}
 
 	@Override
 	protected void onStart(){
@@ -815,8 +842,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		barProgressDialog.setTitle("Getting places");
 		barProgressDialog.setMessage("We are searching places around this area");
 		barProgressDialog.setProgressStyle(barProgressDialog.STYLE_HORIZONTAL);
-		barProgressDialog.setProgress(0);
-		barProgressDialog.setMax(20);
+		barProgressDialog.setProgress(1);
+		barProgressDialog.setMax(10);
 		barProgressDialog.show();
 
 		new Thread(new Runnable() {
@@ -840,5 +867,4 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			}
 		}).start();
 	}
-
 }

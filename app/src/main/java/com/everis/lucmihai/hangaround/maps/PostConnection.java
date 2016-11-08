@@ -62,16 +62,21 @@ public  class PostConnection extends AsyncTask<String, Process, String> {
 		String json = args[1];
 		Log.d(TAG, ' ' + url + ' ' + json.toString());
 		RequestBody body = RequestBody.create(JSON, json);
+		Response response = null;
 		Request request = new Request.Builder()
 				.url(url)
 				.post(body)
 				.build();
 		Log.d(TAG, request.toString());
-		try (Response response = client.newCall(request).execute()) {
+		try  {
+			response = client.newCall(request).execute();
 			response.body().string();
 
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+		finally {
+			response.body().close();
 		}
 		return "Post Connection null response back";
 	}
