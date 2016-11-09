@@ -39,6 +39,7 @@ dependencies {
     apt 'com.jakewharton:butterknife-compiler:8.2.1'
     compile 'com.hkm.ui:advancedtoolbar:0.8.0'
     compile files('libs/stanford-android-lib.jar')
+    compile files('libs/resiliency.jar')
     compile 'com.android.volley:volley:1.0.0'
     compile 'com.android.support:multidex:1.0.1'
     compile 'com.fasterxml.jackson.core:jackson-core:2.7.3'
