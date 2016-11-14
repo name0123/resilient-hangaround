@@ -46,8 +46,8 @@ public class GetStart extends AsyncTask<String, Process, String> {
 		try {
 			response = client.newCall(request).execute();
 		} catch (Exception e) {
-			Log.d(TAG, "Error connection: ");
-			e.printStackTrace();
+			Log.d(TAG, "Ignore error, first get, no stress for  timeout");
+			//e.printStackTrace();
 		}
 		return result;
 	}

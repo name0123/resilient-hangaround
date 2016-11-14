@@ -26,12 +26,22 @@ public class LoginActivity extends Activity {
     private TextView info;
     private LoginButton loginButton;
     private CallbackManager callbackManager;
-    private Context context;
+
+	public Context getContext() {
+		return context;
+	}
+
+	public void setContext(Context context) {
+		this.context = context;
+	}
+
+	private Context context;
 	private ProfileTracker fbProfile;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = getApplicationContext();
+	    checkExternalDependencies(this);
         FacebookSdk.sdkInitialize(this);
         callbackManager = CallbackManager.Factory.create();
         setContentView(R.layout.activity_login);
@@ -87,7 +97,23 @@ public class LoginActivity extends Activity {
             }
         });
     }
-    @Override
+/*
+	checkExternalDependencies maintain one or more threads
+	- internet signal
+	- gps signal
+	- database a
+	- facebook
+	- google
+	- foursquare
+	every
+
+ */
+	private void checkExternalDependencies(Activity a) {
+		// this method has an aspect
+		Log.e("This is old: ", "Are we done with the aspect?");
+	}
+
+	@Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         callbackManager.onActivityResult(requestCode, resultCode, data);
     }

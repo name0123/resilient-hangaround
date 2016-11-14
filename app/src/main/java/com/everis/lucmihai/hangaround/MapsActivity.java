@@ -1,18 +1,16 @@
 package com.everis.lucmihai.hangaround;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Criteria;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
-import android.nfc.Tag;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -29,7 +27,6 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
 import com.everis.lucmihai.hangaround.maps.Connection;
 import com.everis.lucmihai.hangaround.maps.GetAdaptationConnection;
@@ -38,7 +35,6 @@ import com.everis.lucmihai.hangaround.maps.PostConnection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.FusedLocationProviderApi;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -51,17 +47,11 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.List;
+import java.util.Map;
 
 import butterknife.OnClick;
 import stanford.androidlib.SimpleActivity;
@@ -88,6 +78,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private final String SUNADAPTED = "UNADAPTED";
 	private final String SPARTIAL = "PARTIAL";
 	private final String STOTAL = "TOTAL";
+	public static final String PREFS_NAME = "SearchCache";
+	private int count = 0;
 
 	public MapsActivity() throws JSONException {
 	}
@@ -115,6 +107,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
+		context = getApplicationContext();
 		mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		mapFrag.getMapAsync(this);
 		getStart(); // make the first call to wake up  API host, random call, no result taken
@@ -317,8 +310,18 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		fourSquareSearch += ',';
 		fourSquareSearch += Double.toString(longitude);
 		fourSquareSearch += "&radius=150";
-		fourSquareSearch += "&limit=20";
+		fourSquareSearch += "&limit=25";
 //		Log.d(TAG, fourSquareSearch);
+		new Connection(this).execute(fourSquareSearch);
+	}
+	public void getPlacesName(String searchedName) {
+		// YOU PROBABLY NEED TO CALL 4SQARE FROM HERE!
+		//url1 = new URL("https://mobserv.herokuapp.com/4square/search?near=near"); // you have the location
+		String fourSquareSearch = "https://mobserv.herokuapp.com/4square/search?near=";
+		fourSquareSearch += searchedName;
+		fourSquareSearch += "&radius=150";
+		fourSquareSearch += "&limit=25";
+
 		new Connection(this).execute(fourSquareSearch);
 	}
 
@@ -567,6 +570,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			for(int i = 0; i<places.length(); i++){
 				getAdaptationLevel(i);
 			}
+			//Shared here, maby
 			go();
 		}
 		else{
@@ -702,11 +706,38 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 	private void showPlaces(){
 		// this is called after getting the addptedLevel for every place in places - on get done! in go.
-		for(int i = 0; i < places.length(); ++i){
-			showMarker(i);
+		if(count == places.length()-1) {
+			count = 0;
+			for (int i = 0; i < places.length(); ++i) {
+				showMarker(i);
+			}
+			//sharedPreferences here.
+			Log.e("myNewTag: ", places.toString());
+			cacheSearchResult(this);
 		}
-
+		else count++;
 	}
+/*
+	THIS IS STORING THE VALUES OF A CERTAIN SEARCHED LOCATION, TEST REQUIRED
+
+ */
+	private void cacheSearchResult(Activity a) {
+		SharedPreferences sharedprf = context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
+		Map<String, ?> allEntries = sharedprf.getAll();
+
+		for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
+			String key = entry.getKey();
+			String value = entry.getValue().toString();
+			Log.d("map before", entry.getKey() + ": " + entry.getValue().toString());
+			if(value.equals("empty")){
+				SharedPreferences.Editor ed = sharedprf.edit();
+				ed.putString(key, places.toString());
+				ed.commit();
+			}
+			Log.d("map values", entry.getKey() + ": " + entry.getValue().toString());
+		}
+	}
+
 	private void showMarker(int i) {
 		double lat = 0.0;
 		double lng = 0.0;
@@ -729,7 +760,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			Marker placeMarker = mGoogleMap.addMarker(new MarkerOptions()
 					.position(placeLocation)
 					.icon(BitmapDescriptorFactory.defaultMarker(CUNKNOWN))
-					.alpha(0.01f)
+					.alpha(0.21f)
 					.rotation(0.5f)
 					.title(placeName)
 			);
@@ -818,8 +849,11 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         EditText searchedText = (EditText) findViewById(R.id.txtsearch);
         String searchedLocation = searchedText.getText().toString();
+	    cacheSearch(searchedLocation);
+	    getPlacesName(searchedLocation);
 	    // TODO: some cases here if shearchedLocation is address, place, city country ...etc
-	    // https://developer.android.com/reference/android/location/Geocoder.html
+
+	    /* https://developer.android.com/reference/android/location/Geocoder.html
         try {
            //Address address = (Address) geocoder.getFromLocationName(searchedLocation,1); cool
             geocoder = new Geocoder(this);
@@ -828,13 +862,23 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
                 double latitude= addresses.get(0).getLatitude();
                 double longitude= addresses.get(0).getLongitude();
-                getPlaces(latitude,longitude);
+                //getPlaces(latitude,longitude);
+
             }
         }
         catch(Exception e){
             e.printStackTrace();
         }
+            No required anymore, if you search by name, less dependecies!
+        */
     }
+
+	private void cacheSearch(String searchedLocation) {
+		SharedPreferences sharedPref = context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
+		SharedPreferences.Editor editor = sharedPref.edit();
+		editor.putString(searchedLocation,"empty");
+		editor.commit();
+	}
 
 	private void gettingPlacesProgressDialog() {
 		final ProgressDialog barProgressDialog;
