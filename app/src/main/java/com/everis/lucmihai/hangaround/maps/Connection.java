@@ -1,5 +1,7 @@
 package com.everis.lucmihai.hangaround.maps;
 
+import android.app.Activity;
+import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -31,8 +33,9 @@ import okhttp3.Response;
  *
  */
 
-public class Connection extends AsyncTask<String, Process, JSONArray> {
+public class Connection extends AsyncTask<Object, Process, JSONArray> {
 	private JSONArray places;
+
 	private static final String TAG = "KarambaConnection";
 
 	private AsyncTaskCompleteListener<String> callback;
@@ -42,16 +45,32 @@ public class Connection extends AsyncTask<String, Process, JSONArray> {
 		this.callback = cb;
 	}
 
+	/**
+	 * Override this method to perform a computation on a background thread. The
+	 * specified parameters are the parameters passed to {@link #execute}
+	 * by the caller of this task.
+	 * <p>
+	 * This method can call {@link #publishProgress} to publish updates
+	 * on the UI thread.
+	 *
+
+	 * @return A result, defined by the subclass of this task.
+	 * @see #onPreExecute()
+	 * @see #onPostExecute
+	 * @see #publishProgress
+	 */
+
+
+	@Override
 	protected void onPreExecute() {}
 
-	protected JSONArray doInBackground(String... args) {
+	@Override
+	public JSONArray doInBackground(Object... args) {
 		OkHttpClient client = new OkHttpClient();
 		JSONArray result = new JSONArray();
-		String url = args[0];
-		if(args.length > 1){
-			url += args[1];
-		}
+		String url = (String) args[0];
 		Log.d(TAG, " before error: "+url);
+		Log.d(TAG, " before: "+args[1].toString());
 		Request request = new Request.Builder()
 				.url(url)
 				.build();
@@ -65,10 +84,10 @@ public class Connection extends AsyncTask<String, Process, JSONArray> {
 		}
 		return result;
 	}
-
+	@Override
 	protected void onPostExecute(JSONArray places) {
 		// TODO: check this number!
-//		Log.d(TAG, "burla numero 2"+places.length());
+		Log.d("Other new tag: ", "places should have no elements:"+places.length());
 		int number = 11;
 		if (callback != null) {
 			if(places != null) callback.onGetPlacesComplete(places,number);

@@ -84,13 +84,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public MapsActivity() throws JSONException {
 	}
 
-	public JSONArray getPlaces() {
-		return places;
-	}
-
-	public void setPlaces(JSONArray places) {
-		this.places = places;
-	}
 
 	private JSONArray places = new JSONArray("[]");
 	private JSONArray placesVal = new JSONArray("[]");
@@ -205,7 +198,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		//move map camera
 		mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
 		mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(11));
-		getPlaces(latLng.latitude, latLng.longitude);
+		getPlaces(latLng.latitude, latLng.longitude, this);
 
 		//stop location updates
 		if (mGoogleApiClient != null) {
@@ -268,7 +261,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 						}
 						mGoogleMap.setMyLocationEnabled(true);
 					}
-					if(location != null) getPlaces(location.getLatitude(), location.getLongitude());
+					if(location != null) getPlaces(location.getLatitude(), location.getLongitude(),this);
 					else Log.e(TAG,"location is null!");
 
 				} else {
@@ -297,7 +290,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	}
 
 
-	public void getPlaces(double latitude, double longitude) {
+	public void getPlaces(double latitude, double longitude, Activity activity) {
 
 		// YOU PROBABLY NEED TO CALL 4SQARE FROM HERE!
 		//url1 = new URL("https://mobserv.herokuapp.com/4square/search?ll=41.3830878006894,2.04654693603516&limit=50");
@@ -312,9 +305,11 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		fourSquareSearch += "&radius=150";
 		fourSquareSearch += "&limit=25";
 //		Log.d(TAG, fourSquareSearch);
-		new Connection(this).execute(fourSquareSearch);
+		new Connection(this).execute(fourSquareSearch, this);
 	}
-	public void getPlacesName(String searchedName) {
+
+	// this is public doInBackground() - async (save name, if in cache?)
+	public void getPlacesName(String searchedName, Activity a) {
 		// YOU PROBABLY NEED TO CALL 4SQARE FROM HERE!
 		//url1 = new URL("https://mobserv.herokuapp.com/4square/search?near=near"); // you have the location
 		String fourSquareSearch = "https://mobserv.herokuapp.com/4square/search?near=";
@@ -322,7 +317,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		fourSquareSearch += "&radius=150";
 		fourSquareSearch += "&limit=25";
 
-		new Connection(this).execute(fourSquareSearch);
+		new Connection(this).execute(fourSquareSearch,searchedName, this);
 	}
 
 	@Override
@@ -713,29 +708,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			}
 			//sharedPreferences here.
 			Log.e("myNewTag: ", places.toString());
-			cacheSearchResult(this);
+
 		}
 		else count++;
-	}
-/*
-	THIS IS STORING THE VALUES OF A CERTAIN SEARCHED LOCATION, TEST REQUIRED
-
- */
-	private void cacheSearchResult(Activity a) {
-		SharedPreferences sharedprf = context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
-		Map<String, ?> allEntries = sharedprf.getAll();
-
-		for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
-			String key = entry.getKey();
-			String value = entry.getValue().toString();
-			Log.d("map before", entry.getKey() + ": " + entry.getValue().toString());
-			if(value.equals("empty")){
-				SharedPreferences.Editor ed = sharedprf.edit();
-				ed.putString(key, places.toString());
-				ed.commit();
-			}
-			Log.d("map values", entry.getKey() + ": " + entry.getValue().toString());
-		}
 	}
 
 	private void showMarker(int i) {
@@ -849,8 +824,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         EditText searchedText = (EditText) findViewById(R.id.txtsearch);
         String searchedLocation = searchedText.getText().toString();
-	    cacheSearch(searchedLocation);
-	    getPlacesName(searchedLocation);
+	    getPlacesName(searchedLocation, this);
 	    // TODO: some cases here if shearchedLocation is address, place, city country ...etc
 
 	    /* https://developer.android.com/reference/android/location/Geocoder.html
