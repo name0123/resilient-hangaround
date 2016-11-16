@@ -1,28 +1,12 @@
 package com.everis.lucmihai.hangaround.maps;
 
-import android.app.Activity;
-import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.everis.lucmihai.hangaround.MapsActivity;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import org.json.JSONArray;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Map;
-
-import okhttp3.Headers;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
@@ -68,9 +52,10 @@ public class Connection extends AsyncTask<Object, Process, JSONArray> {
 	public JSONArray doInBackground(Object... args) {
 		OkHttpClient client = new OkHttpClient();
 		JSONArray result = new JSONArray();
+		Log.d(TAG, " stequer:s ");
 		String url = (String) args[0];
-		Log.d(TAG, " before error: "+url);
-		Log.d(TAG, " before: "+args[1].toString());
+		Log.d(TAG, " connection: "+url);
+		Log.d(TAG, " before call: "+args[1].toString());
 		Request request = new Request.Builder()
 				.url(url)
 				.build();

@@ -19,6 +19,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -27,6 +28,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
 import com.everis.lucmihai.hangaround.maps.Connection;
 import com.everis.lucmihai.hangaround.maps.GetAdaptationConnection;
@@ -47,14 +49,14 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import java.util.List;
-import java.util.Map;
 
 import butterknife.OnClick;
 import stanford.androidlib.SimpleActivity;
+
 
 public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteListener, OnMapReadyCallback,
 		GoogleApiClient.ConnectionCallbacks,
@@ -80,7 +82,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private final String STOTAL = "TOTAL";
 	public static final String PREFS_NAME = "SearchCache";
 	private int count = 0;
-
+	private LruCache<String, String> placesCache;
 	public MapsActivity() throws JSONException {
 	}
 
@@ -308,8 +310,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		new Connection(this).execute(fourSquareSearch, this);
 	}
 
-	// this is public doInBackground() - async (save name, if in cache?)
-	public void getPlacesName(String searchedName, Activity a) {
+	// this is public doInBackground() - async (save name, if in cache we )
+	public JSONArray getPlacesName(String searchedName, Activity a) {
 		// YOU PROBABLY NEED TO CALL 4SQARE FROM HERE!
 		//url1 = new URL("https://mobserv.herokuapp.com/4square/search?near=near"); // you have the location
 		String fourSquareSearch = "https://mobserv.herokuapp.com/4square/search?near=";
@@ -318,6 +320,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		fourSquareSearch += "&limit=25";
 
 		new Connection(this).execute(fourSquareSearch,searchedName, this);
+		return null;
 	}
 
 	@Override
@@ -578,9 +581,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		// result contains adaptation,four_id level for a place!
 		//Log.d(TAG, " Adapted level got: "+result);
 		String[] adaptIndex = result.split(",");
-		// the result is a full json... BUGGY BUGGY! ADAPTED LEVEL IS NOT WELL STORED:
-		//OUTPUT TO HELP IN NOTEPAD++
-
 		try {
 			//why adaptIndex should be an int?
 			// because is the number of de index attached at the json we search
@@ -600,7 +600,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		{
 			e.printStackTrace();
 		}
-		showPlaces();
+		showPlaces(places, this);
 	}
 
 	@Override
@@ -698,19 +698,18 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			Toast.makeText(this, "Sorry: No places found!", Toast.LENGTH_LONG).show();
 		}
 	}
-
-	private void showPlaces(){
+	// cache places at this point
+	public void showPlaces(JSONArray places, Activity activity) {
 		// this is called after getting the addptedLevel for every place in places - on get done! in go.
-		if(count == places.length()-1) {
+		if (places != null) {
+
 			count = 0;
 			for (int i = 0; i < places.length(); ++i) {
 				showMarker(i);
 			}
 			//sharedPreferences here.
 			Log.e("myNewTag: ", places.toString());
-
 		}
-		else count++;
 	}
 
 	private void showMarker(int i) {
@@ -819,12 +818,20 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
     @OnClick(R.id.bsearch)
     public void onClickSearch(View view){
         // get the first address in text search - call GetPlaces()
+	    places = null;
 	    gettingPlacesProgressDialog();
 		InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         EditText searchedText = (EditText) findViewById(R.id.txtsearch);
         String searchedLocation = searchedText.getText().toString();
-	    getPlacesName(searchedLocation, this);
+	    places = getPlacesName(searchedLocation, this);
+	    // if cached > places has the places > so we can show them
+		if(places != null) {
+			Log.e(TAG, "This it, no connection required, searchedPlace in cache");
+			go();
+			showPlaces(places, this);
+		}
+	    // else > cb will do its job when places is initialized by
 	    // TODO: some cases here if shearchedLocation is address, place, city country ...etc
 
 	    /* https://developer.android.com/reference/android/location/Geocoder.html
@@ -852,6 +859,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		SharedPreferences.Editor editor = sharedPref.edit();
 		editor.putString(searchedLocation,"empty");
 		editor.commit();
+
 	}
 
 	private void gettingPlacesProgressDialog() {

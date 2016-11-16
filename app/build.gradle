@@ -41,6 +41,8 @@ dependencies {
     compile 'com.hkm.ui:advancedtoolbar:0.8.0'
     compile files('libs/stanford-android-lib.jar')
     compile files('libs/dokimos.jar')
+    compile files('disklrucache-2.0.2.jar')
+    compile 'com.jakewharton:disklrucache:2.0.2'
     compile 'com.android.volley:volley:1.0.0'
     compile 'com.android.support:multidex:1.0.1'
     compile 'com.fasterxml.jackson.core:jackson-core:2.7.3'
