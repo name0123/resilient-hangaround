@@ -563,7 +563,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	@Override
 	public void onGetPlacesComplete(JSONArray result, int number) {
 		if(result != null) {
-			Log.d(TAG, "onGetPlacesComplete: "+result);
+			Log.d(TAG, "onGetPlacesComplete not null/empty: "+result);
 			places = result;
 			for(int i = 0; i<places.length(); i++){
 				getAdaptationLevel(i);
@@ -572,7 +572,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			go();
 		}
 		else{
-			Log.d(TAG, "onTaskComplete: "+result.getClass());
+			Log.d(TAG, "No places found: ");
 		}
     }
 
@@ -826,7 +826,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
         String searchedLocation = searchedText.getText().toString();
 	    places = getPlacesName(searchedLocation, this);
 	    // if cached > places has the places > so we can show them
-		if(places != null) {
+		if(places != null && places.length() == 0) {
+			Log.e("placesTag:", String.valueOf(places.length()));
 			Log.e(TAG, "This it, no connection required, searchedPlace in cache");
 			go();
 			showPlaces(places, this);

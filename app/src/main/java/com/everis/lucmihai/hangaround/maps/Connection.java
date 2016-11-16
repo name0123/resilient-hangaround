@@ -51,7 +51,7 @@ public class Connection extends AsyncTask<Object, Process, JSONArray> {
 	@Override
 	public JSONArray doInBackground(Object... args) {
 		OkHttpClient client = new OkHttpClient();
-		JSONArray result = new JSONArray();
+		JSONArray result = null;
 		Log.d(TAG, " stequer:s ");
 		String url = (String) args[0];
 		Log.d(TAG, " connection: "+url);
@@ -62,20 +62,25 @@ public class Connection extends AsyncTask<Object, Process, JSONArray> {
 		Response response = null;
 		try {
 			response = client.newCall(request).execute();
-			result = new JSONArray(response.body().string());
+			String resp = null;
+			if(response.isSuccessful()) {
+				resp = response.body().string();
+				Log.e(TAG, "This is resp:"+resp);
+				if(!resp.isEmpty())result = new JSONArray(resp);
+			}
 		} catch (Exception e) {
 			Log.d(TAG, "Error connection: ");
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 		return result;
 	}
 	@Override
 	protected void onPostExecute(JSONArray places) {
 		// TODO: check this number!
-		Log.d("Other new tag: ", "places should have no elements:"+places.length());
+		if(places != null) Log.d("OnPostExecute: ", "places' length :"+places.length());
 		int number = 11;
 		if (callback != null) {
-			if(places != null) callback.onGetPlacesComplete(places,number);
+			callback.onGetPlacesComplete(places,number);
 
 		}
 	}
