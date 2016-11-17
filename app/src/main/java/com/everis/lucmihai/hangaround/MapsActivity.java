@@ -19,7 +19,6 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
-import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -54,6 +53,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Map;
+
 import butterknife.OnClick;
 import stanford.androidlib.SimpleActivity;
 
@@ -82,15 +83,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private final String STOTAL = "TOTAL";
 	public static final String PREFS_NAME = "SearchCache";
 	private int count = 0;
-	private LruCache<String, String> placesCache;
-	public MapsActivity() throws JSONException {
-	}
-
-
-	private JSONArray places = new JSONArray("[]");
-	private JSONArray placesVal = new JSONArray("[]");
-	;
-
+	private JSONArray places = null;
 
 	SupportMapFragment mapFrag;
 	LocationRequest mLocationRequest;
@@ -353,9 +346,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		final Spinner spWcAccess = (Spinner) alertLayout.findViewById(R.id.spwca);
 		final Spinner spElev = (Spinner) alertLayout.findViewById(R.id.spElev);
 		String placeCategory = "";
-		Log.d(TAG, " This is the marker: "+marker.toString());
+/*		Log.d(TAG, " This is the marker: "+marker.toString());
 		Log.d(TAG, " This is the index: "+index);
-		Log.d(TAG, " This is places's length: "+places.length());
+		Log.d(TAG, " This is places's length: "+places.length());*/
 		try{
 			JSONObject place = places.getJSONObject(index);
 			placeCategory = place.get("category").toString();
@@ -563,12 +556,11 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	@Override
 	public void onGetPlacesComplete(JSONArray result, int number) {
 		if(result != null) {
-			Log.d(TAG, "onGetPlacesComplete not null/empty: "+result);
+			//Log.d(TAG, "onGetPlacesComplete not null/empty: "+result);
 			places = result;
 			for(int i = 0; i<places.length(); i++){
 				getAdaptationLevel(i);
 			}
-			//Shared here, maby
 			go();
 		}
 		else{
@@ -670,7 +662,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		 * At least one place in places!
 		 */
 
-		if(places.length() > 0) {
+		if(places != null && places.length() > 0) {
 		// checking places has new values!
 			try {
 				double lat = ((JSONObject) places.get(0)).getDouble("latitude");
@@ -702,13 +694,10 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public void showPlaces(JSONArray places, Activity activity) {
 		// this is called after getting the addptedLevel for every place in places - on get done! in go.
 		if (places != null) {
-
-			count = 0;
+			System.out.println("showing places with markers"+places.length());
 			for (int i = 0; i < places.length(); ++i) {
 				showMarker(i);
 			}
-			//sharedPreferences here.
-			Log.e("myNewTag: ", places.toString());
 		}
 	}
 
@@ -804,6 +793,17 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		ed.commit();
 
 	}
+	private void showShared(){
+		SharedPreferences sharedprf = context.getSharedPreferences("SearchCache",Context.MODE_PRIVATE);
+		if(sharedprf != null){
+			Map<String, String> allEntries = (Map<String, String>) sharedprf.getAll();
+			for (Map.Entry<String, String> entry : allEntries.entrySet()) {
+				String key = entry.getKey();
+				String value = entry.getValue();
+				Log.i("sharedTag: ", key+' '+value);
+			}
+		}
+	}
 
 	/**
 	 * On clicks  only 2 of them!
@@ -815,10 +815,12 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		Intent intent = new Intent(MapsActivity.this, LoginActivity.class);
 		startActivity(intent);
 	}
+
     @OnClick(R.id.bsearch)
     public void onClickSearch(View view){
         // get the first address in text search - call GetPlaces()
 	    places = null;
+	    showShared();
 	    gettingPlacesProgressDialog();
 		InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
@@ -826,12 +828,10 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
         String searchedLocation = searchedText.getText().toString();
 	    places = getPlacesName(searchedLocation, this);
 	    // if cached > places has the places > so we can show them
-		if(places != null && places.length() == 0) {
-			Log.e("placesTag:", String.valueOf(places.length()));
-			Log.e(TAG, "This it, no connection required, searchedPlace in cache");
-			go();
-			showPlaces(places, this);
-		}
+	    if(places != null) {
+		    go();
+		    showPlaces(places, this);
+	    }
 	    // else > cb will do its job when places is initialized by
 	    // TODO: some cases here if shearchedLocation is address, place, city country ...etc
 
