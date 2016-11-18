@@ -12,4 +12,5 @@ public interface AsyncTaskCompleteListener<JSONArray> {
 	void onGetAdaptationComplete(String result, int number);
 	void onVotedPlace(org.json.JSONObject result);
 	String onConnectionStatusCheck(String s);
+	String onKeepChecking(String s);
 }

@@ -14,14 +14,13 @@ import okhttp3.Response;
  * Created by lucmihai on 18/11/2016.
  */
 
-public class ConnectionStatusCheck extends AsyncTask<String, Process, String> {
-
+public class KeepCheckingConnection extends AsyncTask<String, Process, String> {
 	private static final String TAG = "CheckStatusCheck";
 
 	private AsyncTaskCompleteListener<String> callback;
 
 
-	public ConnectionStatusCheck(AsyncTaskCompleteListener<String> cb) {
+	public KeepCheckingConnection(AsyncTaskCompleteListener<String> cb) {
 		this.callback = cb;
 	}
 
@@ -46,29 +45,28 @@ public class ConnectionStatusCheck extends AsyncTask<String, Process, String> {
 
 	@Override
 	public String doInBackground(String... args) {
-		String result = "init";
+		String result = "ok";
+		// cada 5 segons tornem a comprovar la connexió
 		OkHttpClient client = new OkHttpClient.Builder()
-				.connectTimeout(1000, TimeUnit.SECONDS)
-				.readTimeout(1000, TimeUnit.MILLISECONDS)
+				.connectTimeout(5000, TimeUnit.SECONDS)
+				.readTimeout(5000, TimeUnit.MILLISECONDS)
 				.build();
 		Request requestG = new Request.Builder().url("http://google.com").build();
 		Request requestB = new Request.Builder().url("http://mobserv.herokuapp.com/places/getall").build();
-		try {
-			Response response = client.newCall(requestG).execute();
-			int gcode = response.code();
-			Log.e(TAG, "Check connection to google code: "+gcode);
-			if(gcode >= 200 && gcode < 400) {
-				// internet is fine
+		int gcode = 0;
+		int bcode = 0;
+		while((gcode < 200 && gcode > 400) || (bcode < 200 && bcode > 400)) {
+			// aqui es queda el thread fins tenir internet o que la dependència torna
+			try {
+				Response response = client.newCall(requestG).execute();
+				gcode = response.code();
+				Log.e(TAG, "Check connection to google code: " + gcode);
 				response = client.newCall(requestB).execute();
-				int bcode = response.code();
-				Log.e(TAG, "Check connection to backend code: "+bcode);
-				if(bcode >= 200 && bcode < 400) result = "ALL OK HERE:";
-				else result = "BACKEND_OFFLINE";
+				bcode = response.code();
+				Log.e(TAG, "Check connection to backend code: " + bcode);
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
-			else result = "INTERNET_OFFLINE";
-
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 		return result;
 	}
@@ -77,8 +75,9 @@ public class ConnectionStatusCheck extends AsyncTask<String, Process, String> {
 		// TODO: check this number!
 		int number = 11;
 		if (callback != null) {
-			callback.onConnectionStatusCheck(status);
+			callback.onKeepChecking(status);
 
 		}
 	}
 }
+

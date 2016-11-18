@@ -7,6 +7,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import org.json.JSONObject;
 
+import java.util.concurrent.TimeUnit;
+
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -47,10 +49,10 @@ public  class PostConnection extends AsyncTask<String, Process, JSONObject> {
 		final MediaType JSON
 				= MediaType.parse("application/json; charset=utf-8");
 
-		OkHttpClient client = new OkHttpClient();
-		/*OkHttpClient client = clien.newBuilder()
-				.readTimeout(1000, TimeUnit.MILLISECONDS)
-				.build();*/
+
+		OkHttpClient client = new OkHttpClient.Builder()
+				.readTimeout(1500, TimeUnit.MILLISECONDS)
+				.build();
 		JSONObject result = null;
 		String url = args[0];
 		String json = args[1];

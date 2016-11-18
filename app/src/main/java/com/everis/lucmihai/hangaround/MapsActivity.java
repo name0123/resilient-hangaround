@@ -30,8 +30,10 @@ import android.widget.Toast;
 
 import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
 import com.everis.lucmihai.hangaround.maps.Connection;
+import com.everis.lucmihai.hangaround.maps.ConnectionStatusCheck;
 import com.everis.lucmihai.hangaround.maps.GetAdaptationConnection;
 import com.everis.lucmihai.hangaround.maps.GetStart;
+import com.everis.lucmihai.hangaround.maps.KeepCheckingConnection;
 import com.everis.lucmihai.hangaround.maps.PostConnection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.common.ConnectionResult;
@@ -194,6 +196,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		//move map camera
 		mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
 		mGoogleMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+		//definetly not moving around!
 		getPlaces(latLng.latitude, latLng.longitude, this);
 
 		//stop location updates
@@ -258,6 +261,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 						mGoogleMap.setMyLocationEnabled(true);
 					}
 					if(location != null) getPlaces(location.getLatitude(), location.getLongitude(),this);
+					// this is not going to be used... to test
 					else Log.e(TAG,"location is null!");
 
 				} else {
@@ -565,33 +569,15 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		else{
 			// the searchedLocation may not have places, or the connection could be the problem: new aspect on funciton
-
 			String nonp = checkConnections(this);
 			Log.d(TAG, "No places found: "+nonp);
 
-			if("INTERNET_OFFLINE".equals(nonp)){
-				Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
-						"\n You seem to be offline!", Toast.LENGTH_LONG).show();
-			}
-			else if("BACKEND_OFFLINE".equals(nonp)){
-				Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
-						"\n Our servers seem to be offline!", Toast.LENGTH_LONG).show();
-			}
-			else {
-				Toast.makeText(getBaseContext(), "There is no city with this name on Earth! " +
-						"\n Or there are no places in this city!", Toast.LENGTH_LONG).show();
-			}
 		}
     }
 
-	private String checkConnections(Activity mapsActivity) {
-
-		return "all ok home";
-	}
-
-	public String notGetPlaces(Activity mapsActivity) {
-		// didn't get any place, check connection - > change BACKEND_MODE = 'OFFLINE'
-		return "ALL OK HERE:HOME";
+	public String checkConnections(Activity mapsActivity) {
+		new ConnectionStatusCheck(this).execute();
+		return "CHECKING CONNECTIONS";
 	}
 
 	@Override
@@ -619,13 +605,71 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			e.printStackTrace();
 		}
 		Log.d(TAG, "onGetAdaptedLevel");
-		showPlaces(places, this);
+		updatePlaces(places);
+		//showPlaces(places, this); - update places
 	}
 
 	@Override
 	public void onVotedPlace(JSONObject result) {
 		// on place voted!
 		afterVote(result, this);
+		dirtyVotesUpdate();
+	}
+
+	@Override
+	public String onConnectionStatusCheck(String s) {
+		// BACK FROM connectionSratusCheck(s is final)
+		if("INTERNET_OFFLINE".equals(s)){
+			Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
+					"\n You seem to be offline!", Toast.LENGTH_LONG).show();
+			keepChecking(this);
+		}
+		else if("BACKEND_OFFLINE".equals(s)){
+			Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
+					"\n Our servers seem to be offline!", Toast.LENGTH_LONG).show();
+			keepChecking(this);
+		}
+		else {
+			Toast.makeText(getBaseContext(), "There is no city with this name on Earth! " +
+					"\n Or there are no places in this city!", Toast.LENGTH_LONG).show();
+		}
+		return null;
+	}
+
+	@Override
+	public String onKeepChecking(String s) {
+		// we are back in the game : ONLINE
+		// dirty bits should do the job
+		dirtyVotesUpdate();
+		// - last searchedName should be called
+		dirtySearchUpdate();
+		return null;
+	}
+
+	private void dirtySearchUpdate() {
+	}
+
+	private void dirtyVotesUpdate() {
+		//Toast, Good news everyone, connection is back. Your votes are being uploaded!
+		SharedPreferences sharedprf = context.getSharedPreferences("DirtyVoteCache",Context.MODE_PRIVATE);
+		if(sharedprf != null) {
+			SharedPreferences.Editor ed = sharedprf.edit();
+			Map<String, String> dirtyVoteCache = (Map<String, String>) sharedprf.getAll();
+			for (Map.Entry<String, String> entry : dirtyVoteCache.entrySet()) {
+				String key = entry.getKey();
+				String nvl = entry.getValue();
+				String setValofd = "https://mobserv.herokuapp.com/valorations/newfour";
+				String args[] = new String []{setValofd,nvl};
+				new PostConnection(this).execute(args);
+				break; // just one connection at a time.
+			}
+		}
+	}
+
+	public String keepChecking(MapsActivity mapsActivity) {
+		BACKEND_MODE = "OFFLINE"; // INTERNET might be offline too, but rest!
+		new KeepCheckingConnection(this).execute();
+		return null;
 	}
 
 	public void afterVote(JSONObject result, Activity mapsActivity) {
@@ -636,6 +680,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		else{
 			Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
 					"\n your vote will be saved ASAP!", Toast.LENGTH_SHORT).show();
+			keepChecking(this);
 		}
 	}
 
@@ -732,15 +777,27 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	// cache places at this point
 	public void showPlaces(JSONArray places, Activity activity) {
 		// this is called after getting the addptedLevel for every place in places - on get done! in go.
-		Log.e(TAG,"showing places with markers: "+ String.valueOf(places!=null));
+		//Log.e(TAG,"showing places with markers: "+ String.valueOf(places!=null));
 		if (places != null) {
-			Log.e(TAG,"showing places with markers"+places.length());
+			//Log.e(TAG,"showing places with markers"+places.length());
 			for (int i = 0; i < places.length(); ++i) {
 				showMarker(i);
 			}
 		}
 	}
 
+	/**
+	 *      interesting soultion, to update markers, no aspects triggered 20 times!
+	 *
+	 * @param places
+	 */
+	public void updatePlaces(JSONArray places) {
+		if (places != null) {
+			for (int i = 0; i < places.length(); ++i) {
+				showMarker(i);
+			}
+		}
+	}
 	private void showMarker(int i) {
 		double lat = 0.0;
 		double lng = 0.0;
@@ -844,6 +901,17 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			}
 		}
 	}
+	private void showDirty(){
+		SharedPreferences sharedprf = context.getSharedPreferences("DirtyVoteCache",Context.MODE_PRIVATE);
+		if(sharedprf != null){
+			Map<String, String> allEntries = (Map<String, String>) sharedprf.getAll();
+			for (Map.Entry<String, String> entry : allEntries.entrySet()) {
+				String key = entry.getKey();
+				String value = entry.getValue();
+				Log.i("dirtyTag: ", key+' '+value);
+			}
+		}
+	}
 
 	/**
 	 * On clicks  only 2 of them!
@@ -861,7 +929,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
         // get the first address in text search - call GetPlaces()
 	    places = null;
 	    showShared();
-	    gettingPlacesProgressDialog();
+	    showDirty();
+	    //gettingPlacesProgressDialog();
 		InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         EditText searchedText = (EditText) findViewById(R.id.txtsearch);
