@@ -72,10 +72,10 @@ public  class PostConnection extends AsyncTask<String, Process, JSONObject> {
 			}
 			else{
 				Log.e(TAG, "No connection, try to cancel!");
-				result = null;
 				call.cancel(); // ??
 				response.body().close();
-				return result;
+				return null;
+
 			}
 		} catch (Exception e) {
 			Log.d(TAG, "Connection error");
@@ -94,5 +94,6 @@ public  class PostConnection extends AsyncTask<String, Process, JSONObject> {
 		int number = 2;
 		if (callback != null)
 			callback.onVotedPlace(content);
+		cancel(true);
 	}
 }

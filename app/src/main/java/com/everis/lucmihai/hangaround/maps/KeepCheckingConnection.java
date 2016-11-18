@@ -44,14 +44,17 @@ public class KeepCheckingConnection extends AsyncTask<String, Process, String> {
 
 	@Override
 	public String doInBackground(String... args) {
-		String result = "ok";
-		// cada 5 segons tornem a comprovar la connexió
-		OkHttpClient client = new OkHttpClient();
-		Request requestG = new Request.Builder().url("http://google.com").build();
-		Request requestB = new Request.Builder().url("http://mobserv.herokuapp.com/places/getall").build();
+		return checkConnections();
+	}
+	private String checkConnections(){
+		String result =  null;
 		int gcode = 0;
 		int bcode = 0;
-		while((gcode < 200 && gcode > 400) || (bcode < 200 && bcode > 400)) {
+		if((gcode < 200 && gcode > 400) || (bcode < 200 && bcode > 400)) {
+			OkHttpClient client = new OkHttpClient();
+			Request requestG = new Request.Builder().url("http://google.com").build();
+			Request requestB = new Request.Builder().url("http://mobserv.herokuapp.com/places/getall").build();
+
 			// aqui es queda el thread fins tenir internet o que la dependència torna
 			Response response = null;
 			try {
@@ -61,14 +64,7 @@ public class KeepCheckingConnection extends AsyncTask<String, Process, String> {
 				response = client.newCall(requestB).execute();
 				bcode = response.code();
 				Log.e(TAG, "Check connection to backend code: " + bcode);
-				try {
-					Log.e(TAG, "Went to sleep");
-					TimeUnit.SECONDS.sleep(5);
-					Log.e(TAG, "Come from sleep");
-				}
-				catch (InterruptedException ex){
-					Thread.currentThread().interrupt();
-				}
+
 			} catch (Exception e) {
 
 				e.printStackTrace();
@@ -77,7 +73,19 @@ public class KeepCheckingConnection extends AsyncTask<String, Process, String> {
 				response.body().close();
 			}
 		}
-		return result;
+		else {
+			result ="ONLINE";
+			return  result;
+		}
+		try {
+			Log.e(TAG, "Went to sleep");
+			TimeUnit.SECONDS.sleep(10);
+			Log.e(TAG, "Come from sleep");
+		}
+		catch (InterruptedException ex){
+			Thread.currentThread().interrupt();
+		}
+		return checkConnections();
 	}
 	@Override
 	protected void onPostExecute(String status) {
@@ -85,7 +93,6 @@ public class KeepCheckingConnection extends AsyncTask<String, Process, String> {
 		int number = 11;
 		if (callback != null) {
 			callback.onKeepChecking(status);
-
 		}
 	}
 }

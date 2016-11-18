@@ -626,8 +626,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		if(result != null) afterVote(result, this);
 		else {
 			String nonp = checkConnections(this);
-			Log.d(TAG, "something just happened!");
-			return;
+			Log.d(TAG, "something just happened!"+nonp);
+			//return; dpesnt help
 		}
 		// re-thinkable
 		//if("OFFLINE".equals(BACKEND_MODE))dirtyVotesUpdate();
@@ -657,7 +657,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public String onKeepChecking(String s) {
 		// we are back in the game : ONLINE
 		// dirty bits should do the job
-		dirtyVotesUpdate();
+		if("ONLINE".equals(BACKEND_MODE))dirtyVotesUpdate();
 		// - last searchedName should be called
 		dirtySearchUpdate();
 		return null;
