@@ -3,10 +3,6 @@ package com.everis.lucmihai.hangaround.maps;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import okhttp3.OkHttpClient;
@@ -64,6 +60,9 @@ public class GetAdaptationConnection extends AsyncTask<String, Process, String> 
 		} catch (Exception e) {
 			Log.d(TAG, "Error connection: ");
 			e.printStackTrace();
+		}
+		finally {
+			response.body().close();
 		}
 		return result;
 	}

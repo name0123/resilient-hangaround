@@ -72,6 +72,9 @@ public class Connection extends AsyncTask<Object, Process, JSONArray> {
 			Log.d(TAG, "Error connection: ");
 			e.printStackTrace();
 		}
+		finally {
+			response.body().close();
+		}
 		Log.d(TAG, "The return of the Result: "+result);
 		return result;
 	}

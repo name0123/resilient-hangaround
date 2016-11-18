@@ -99,6 +99,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_maps);
 		context = getApplicationContext();
+		context.getSharedPreferences("SearchCache",Context.MODE_ENABLE_WRITE_AHEAD_LOGGING);
+		context.getSharedPreferences("DirtyVoteCache",Context.MODE_ENABLE_WRITE_AHEAD_LOGGING);
+		context.getSharedPreferences("DirtySearchCache",Context.MODE_ENABLE_WRITE_AHEAD_LOGGING);
 		mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		mapFrag.getMapAsync(this);
 		//getStart(); // make the first call to wake up  API host, random call, no result taken
@@ -387,7 +390,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		            //Log.i(TAG,newValPlace.el.toString());
 		            ObjectMapper mapper = new ObjectMapper();
 		            String newValPlaceJson = mapper.writeValueAsString(newValPlace);
-		            //Log.e(TAG, "Json stuff: "+newValPlaceJson.toString());
+		            Log.e(TAG, "Json stuff: "+newValPlaceJson.toString());
 		            votePlace(newValPlaceJson,place.getString("four_id"),index,MapsActivity.this);
 
 	            }catch (Exception e){
@@ -460,7 +463,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			if(a&&w&&e) place.put("adaptedLevel", "TOTAL");
 			else if(a||w||e) place.put("adaptedLevel", "PARTIAL");
 			else place.put("adaptedLevel", "UNADAPTED");
-			places.put(place);
+			places.put(index,place);
 		}catch (Exception ex){
 			ex.printStackTrace();
 		}
@@ -473,11 +476,10 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			String args[] = new String []{setValofd,nvl};
 			//Log.e(TAG, "Place before: "+places);
 			setLevelForPlace(index,nvl);
-			//Log.e(TAG, "Place after : "+places);
+			Log.e(TAG, "Place after : "+places.get(index).toString());
 			showMarker(index);
+			Log.e(TAG, "to post it");
 			new PostConnection(this).execute(args);
-			//String resp = connection.post(setValoCS, nvl);
-			// TODO: change marker here!
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -566,6 +568,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				getAdaptationLevel(i);
 			}
 			go();
+			// showPlaces cannot be done here, because the places does not have the adaptedLevel yet
+			//showPlaces(places, this);
 		}
 		else{
 			// the searchedLocation may not have places, or the connection could be the problem: new aspect on funciton
@@ -595,9 +599,16 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			al = al.split(":")[1];
 			al = al.replace("\"", "");
 			al = al.replace("}", "");
+			Log.d(TAG, "put is put, or is append: "+String.valueOf(places.length())+' '+count);
 			place.put("adaptedLevel", al);
-			places.put(place);
-			Log.d(TAG, " Trying hard: "+places.get(index).toString());
+			places.put(index,place);
+			++count;
+			if(count == places.length()){
+				Log.d(TAG, " Trying hard: "+places.get(index).toString()+' '+count);
+				showPlaces(places, this);
+				count = 0;
+			}
+
 
 		}
 		catch (Exception e)
@@ -606,14 +617,20 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		Log.d(TAG, "onGetAdaptedLevel");
 		updatePlaces(places);
-		//showPlaces(places, this); - update places
 	}
 
 	@Override
 	public void onVotedPlace(JSONObject result) {
-		// on place voted!
-		afterVote(result, this);
-		dirtyVotesUpdate();
+		// on place voted: we do had connection
+		Log.d(TAG, "onVotedPlace: here the result is diferent from the json posted! "+result);
+		if(result != null) afterVote(result, this);
+		else {
+			String nonp = checkConnections(this);
+			Log.d(TAG, "something just happened!");
+			return;
+		}
+		// re-thinkable
+		//if("OFFLINE".equals(BACKEND_MODE))dirtyVotesUpdate();
 	}
 
 	@Override
@@ -891,6 +908,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 	}
 	private void showShared(){
+		Log.i("sharedTag: ","Showing Shared Values");
 		SharedPreferences sharedprf = context.getSharedPreferences("SearchCache",Context.MODE_PRIVATE);
 		if(sharedprf != null){
 			Map<String, String> allEntries = (Map<String, String>) sharedprf.getAll();
@@ -902,6 +920,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 	}
 	private void showDirty(){
+		Log.i("sharedTag: ","Showing Dirty votes Values");
 		SharedPreferences sharedprf = context.getSharedPreferences("DirtyVoteCache",Context.MODE_PRIVATE);
 		if(sharedprf != null){
 			Map<String, String> allEntries = (Map<String, String>) sharedprf.getAll();

@@ -4,7 +4,6 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -47,14 +46,12 @@ public class ConnectionStatusCheck extends AsyncTask<String, Process, String> {
 	@Override
 	public String doInBackground(String... args) {
 		String result = "init";
-		OkHttpClient client = new OkHttpClient.Builder()
-				.connectTimeout(1000, TimeUnit.SECONDS)
-				.readTimeout(1000, TimeUnit.MILLISECONDS)
-				.build();
+		OkHttpClient client = new OkHttpClient();
 		Request requestG = new Request.Builder().url("http://google.com").build();
 		Request requestB = new Request.Builder().url("http://mobserv.herokuapp.com/places/getall").build();
+		Response response = null;
 		try {
-			Response response = client.newCall(requestG).execute();
+			response = client.newCall(requestG).execute();
 			int gcode = response.code();
 			Log.e(TAG, "Check connection to google code: "+gcode);
 			if(gcode >= 200 && gcode < 400) {
@@ -66,10 +63,14 @@ public class ConnectionStatusCheck extends AsyncTask<String, Process, String> {
 				else result = "BACKEND_OFFLINE";
 			}
 			else result = "INTERNET_OFFLINE";
-
+			return result;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		finally {
+			response.body().close();
+		}
+
 		return result;
 	}
 	@Override

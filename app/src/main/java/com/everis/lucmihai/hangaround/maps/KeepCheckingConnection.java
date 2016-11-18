@@ -3,7 +3,6 @@ package com.everis.lucmihai.hangaround.maps;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
@@ -47,25 +46,35 @@ public class KeepCheckingConnection extends AsyncTask<String, Process, String> {
 	public String doInBackground(String... args) {
 		String result = "ok";
 		// cada 5 segons tornem a comprovar la connexió
-		OkHttpClient client = new OkHttpClient.Builder()
-				.connectTimeout(5000, TimeUnit.SECONDS)
-				.readTimeout(5000, TimeUnit.MILLISECONDS)
-				.build();
+		OkHttpClient client = new OkHttpClient();
 		Request requestG = new Request.Builder().url("http://google.com").build();
 		Request requestB = new Request.Builder().url("http://mobserv.herokuapp.com/places/getall").build();
 		int gcode = 0;
 		int bcode = 0;
 		while((gcode < 200 && gcode > 400) || (bcode < 200 && bcode > 400)) {
 			// aqui es queda el thread fins tenir internet o que la dependència torna
+			Response response = null;
 			try {
-				Response response = client.newCall(requestG).execute();
+				response = client.newCall(requestG).execute();
 				gcode = response.code();
 				Log.e(TAG, "Check connection to google code: " + gcode);
 				response = client.newCall(requestB).execute();
 				bcode = response.code();
 				Log.e(TAG, "Check connection to backend code: " + bcode);
-			} catch (IOException e) {
+				try {
+					Log.e(TAG, "Went to sleep");
+					TimeUnit.SECONDS.sleep(5);
+					Log.e(TAG, "Come from sleep");
+				}
+				catch (InterruptedException ex){
+					Thread.currentThread().interrupt();
+				}
+			} catch (Exception e) {
+
 				e.printStackTrace();
+			}
+			finally {
+				response.body().close();
 			}
 		}
 		return result;

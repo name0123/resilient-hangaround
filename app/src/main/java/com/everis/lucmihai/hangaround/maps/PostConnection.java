@@ -7,8 +7,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 import org.json.JSONObject;
 
-import java.util.concurrent.TimeUnit;
-
+import okhttp3.Call;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -48,11 +47,10 @@ public  class PostConnection extends AsyncTask<String, Process, JSONObject> {
 	protected JSONObject doInBackground(String... args) {
 		final MediaType JSON
 				= MediaType.parse("application/json; charset=utf-8");
+		Log.e(TAG, "I am post, post, posting it");
 
+		OkHttpClient client = new OkHttpClient();
 
-		OkHttpClient client = new OkHttpClient.Builder()
-				.readTimeout(1500, TimeUnit.MILLISECONDS)
-				.build();
 		JSONObject result = null;
 		String url = args[0];
 		String json = args[1];
@@ -65,22 +63,27 @@ public  class PostConnection extends AsyncTask<String, Process, JSONObject> {
 				.build();
 		Log.d(TAG, request.toString());
 		try  {
-			response = client.newCall(request).execute();
+			final Call call = client.newCall(request);
+			response = call.execute();
 			String res = response.body().string();
 			if(response.code() == 200){
 				result = new JSONObject(res);
 				Log.e(TAG, "This is result: "+result);
 			}
 			else{
-				Log.e(TAG, "This no connection case, result is set null ");
+				Log.e(TAG, "No connection, try to cancel!");
 				result = null;
+				call.cancel(); // ??
+				response.body().close();
+				return result;
 			}
 		} catch (Exception e) {
-			Log.d(TAG, "response tag: "+response.code());
+			Log.d(TAG, "Connection error");
 			e.printStackTrace();
-
-			if (callback != null)
-				callback.onVotedPlace(result);
+			response.body().close();
+		}
+		finally {
+			if(response.body() != null)response.body().close();
 		}
 		return result;
 	}

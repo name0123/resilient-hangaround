@@ -3,12 +3,6 @@ package com.everis.lucmihai.hangaround.maps;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -48,6 +42,9 @@ public class GetStart extends AsyncTask<String, Process, String> {
 		} catch (Exception e) {
 			Log.d(TAG, "Ignore error, first get, no stress for  timeout");
 			//e.printStackTrace();
+		}
+		finally {
+			response.body().close();
 		}
 		return result;
 	}
