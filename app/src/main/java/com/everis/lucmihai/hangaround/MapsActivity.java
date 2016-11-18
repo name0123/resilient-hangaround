@@ -84,6 +84,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public static final String PREFS_NAME = "SearchCache";
 	private int count = 0;
 	private JSONArray places = null;
+	private String BACKEND_MODE = "ONLINE";
 
 	SupportMapFragment mapFrag;
 	LocationRequest mLocationRequest;
@@ -98,7 +99,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		context = getApplicationContext();
 		mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		mapFrag.getMapAsync(this);
-		getStart(); // make the first call to wake up  API host, random call, no result taken
+		//getStart(); // make the first call to wake up  API host, random call, no result taken
 		String userLog="guest";
 		if (savedInstanceState == null) {
 			Bundle extras = getIntent().getExtras();
@@ -311,7 +312,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		fourSquareSearch += searchedName;
 		fourSquareSearch += "&radius=150";
 		fourSquareSearch += "&limit=25";
-
 		new Connection(this).execute(fourSquareSearch,searchedName, this);
 		return null;
 	}
@@ -384,7 +384,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		            ObjectMapper mapper = new ObjectMapper();
 		            String newValPlaceJson = mapper.writeValueAsString(newValPlace);
 		            //Log.e(TAG, "Json stuff: "+newValPlaceJson.toString());
-		            votePlace(newValPlaceJson,place.getString("four_id"),index);
+		            votePlace(newValPlaceJson,place.getString("four_id"),index,MapsActivity.this);
 
 	            }catch (Exception e){
 		            // TODO: handling needed!
@@ -461,7 +461,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			ex.printStackTrace();
 		}
 	}
-	private void votePlace(String nvl, String four_id, Integer index) {
+	public void votePlace(String nvl, String four_id, Integer index, Activity a) {
 
 		try {
 			String setValofd = "https://mobserv.herokuapp.com/valorations/newfour";
@@ -564,9 +564,35 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			go();
 		}
 		else{
-			Log.d(TAG, "No places found: ");
+			// the searchedLocation may not have places, or the connection could be the problem: new aspect on funciton
+
+			String nonp = checkConnections(this);
+			Log.d(TAG, "No places found: "+nonp);
+
+			if("INTERNET_OFFLINE".equals(nonp)){
+				Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
+						"\n You seem to be offline!", Toast.LENGTH_LONG).show();
+			}
+			else if("BACKEND_OFFLINE".equals(nonp)){
+				Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
+						"\n Our servers seem to be offline!", Toast.LENGTH_LONG).show();
+			}
+			else {
+				Toast.makeText(getBaseContext(), "There is no city with this name on Earth! " +
+						"\n Or there are no places in this city!", Toast.LENGTH_LONG).show();
+			}
 		}
     }
+
+	private String checkConnections(Activity mapsActivity) {
+
+		return "all ok home";
+	}
+
+	public String notGetPlaces(Activity mapsActivity) {
+		// didn't get any place, check connection - > change BACKEND_MODE = 'OFFLINE'
+		return "ALL OK HERE:HOME";
+	}
 
 	@Override
 	public void onGetAdaptationComplete(String result, int number){
@@ -585,19 +611,32 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			al = al.replace("}", "");
 			place.put("adaptedLevel", al);
 			places.put(place);
-			//Log.d(TAG, " Trying hard: "+places.get(index).toString());
+			Log.d(TAG, " Trying hard: "+places.get(index).toString());
 
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace();
 		}
+		Log.d(TAG, "onGetAdaptedLevel");
 		showPlaces(places, this);
 	}
 
 	@Override
-	public void onVotedPlace(JSONArray result, int number) {
+	public void onVotedPlace(JSONObject result) {
 		// on place voted!
+		afterVote(result, this);
+	}
+
+	public void afterVote(JSONObject result, Activity mapsActivity) {
+		if(result != null) {
+			Toast.makeText(getBaseContext(), "Your vote has been saved", Toast.LENGTH_SHORT).show();
+			// esborrem la cache (result no needed on votePlace)
+		}
+		else{
+			Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
+					"\n your vote will be saved ASAP!", Toast.LENGTH_SHORT).show();
+		}
 	}
 
 	private LatLng minim(JSONArray places){
@@ -693,8 +732,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	// cache places at this point
 	public void showPlaces(JSONArray places, Activity activity) {
 		// this is called after getting the addptedLevel for every place in places - on get done! in go.
+		Log.e(TAG,"showing places with markers: "+ String.valueOf(places!=null));
 		if (places != null) {
-			System.out.println("showing places with markers"+places.length());
+			Log.e(TAG,"showing places with markers"+places.length());
 			for (int i = 0; i < places.length(); ++i) {
 				showMarker(i);
 			}
