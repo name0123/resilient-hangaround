@@ -47,7 +47,7 @@ public class KeepCheckingConnection extends AsyncTask<String, Process, String> {
 		return checkConnections();
 	}
 	private String checkConnections(){
-		String result =  null;
+		String result =  "OFFLINE";
 		int gcode = 0;
 		int bcode = 0;
 		if((gcode < 200 && gcode > 400) || (bcode < 200 && bcode > 400)) {
@@ -77,12 +77,15 @@ public class KeepCheckingConnection extends AsyncTask<String, Process, String> {
 			result ="ONLINE";
 			return  result;
 		}
+		Log.e(TAG, "Before you sleep!");
 		try {
 			Log.e(TAG, "Went to sleep");
 			TimeUnit.SECONDS.sleep(10);
 			Log.e(TAG, "Come from sleep");
+
 		}
 		catch (InterruptedException ex){
+			ex.printStackTrace();
 			Thread.currentThread().interrupt();
 		}
 		return checkConnections();
@@ -92,7 +95,8 @@ public class KeepCheckingConnection extends AsyncTask<String, Process, String> {
 		// TODO: check this number!
 		int number = 11;
 		if (callback != null) {
-			callback.onKeepChecking(status);
+			Log.e(TAG, "This is the status returning: "+status);
+			//callback.onKeepChecking(status);
 		}
 	}
 }

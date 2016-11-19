@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -33,7 +34,6 @@ import com.everis.lucmihai.hangaround.maps.Connection;
 import com.everis.lucmihai.hangaround.maps.ConnectionStatusCheck;
 import com.everis.lucmihai.hangaround.maps.GetAdaptationConnection;
 import com.everis.lucmihai.hangaround.maps.GetStart;
-import com.everis.lucmihai.hangaround.maps.KeepCheckingConnection;
 import com.everis.lucmihai.hangaround.maps.PostConnection;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.android.gms.common.ConnectionResult;
@@ -86,7 +86,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public static final String PREFS_NAME = "SearchCache";
 	private int count = 0;
 	private JSONArray places = null;
-	private String BACKEND_MODE = "ONLINE";
+	private String BACKEND = "OFFLINE";
+	private String INTERNET = "OFFLINE";
 
 	SupportMapFragment mapFrag;
 	LocationRequest mLocationRequest;
@@ -105,6 +106,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		mapFrag.getMapAsync(this);
 		//getStart(); // make the first call to wake up  API host, random call, no result taken
+		checkConnections("FIRST_RUN",this);
 		String userLog="guest";
 		if (savedInstanceState == null) {
 			Bundle extras = getIntent().getExtras();
@@ -119,6 +121,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			Button lgnButton = (Button) findById(R.id.blogin);
 			lgnButton.setText("Welcome \n"+userLog);
 		}
+
 
 	}
 
@@ -573,14 +576,15 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		else{
 			// the searchedLocation may not have places, or the connection could be the problem: new aspect on funciton
-			String nonp = checkConnections(this);
+			String nonp = checkConnections("no sleep",this);
 			Log.d(TAG, "No places found: "+nonp);
 
 		}
     }
 
-	public String checkConnections(Activity mapsActivity) {
-		new ConnectionStatusCheck(this).execute();
+	public String checkConnections(String sleep, Activity mapsActivity) {
+		String[] args = new String[]{sleep};
+		new ConnectionStatusCheck(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,args);
 		return "CHECKING CONNECTIONS";
 	}
 
@@ -625,42 +629,58 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		Log.d(TAG, "onVotedPlace: here the result is diferent from the json posted! "+result);
 		if(result != null) afterVote(result, this);
 		else {
-			String nonp = checkConnections(this);
+			INTERNET = "OFFLINE";
+			BACKEND = "OFFLINE";
+			String nonp = checkConnections("NO_SLEEP",this);
 			Log.d(TAG, "something just happened!"+nonp);
-			//return; dpesnt help
 		}
-		// re-thinkable
-		//if("OFFLINE".equals(BACKEND_MODE))dirtyVotesUpdate();
 	}
 
 	@Override
-	public String onConnectionStatusCheck(String s) {
+	public void onConnectionStatusCheck(String[] s) {
 		// BACK FROM connectionSratusCheck(s is final)
-		if("INTERNET_OFFLINE".equals(s)){
-			Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
-					"\n You seem to be offline!", Toast.LENGTH_LONG).show();
-			keepChecking(this);
-		}
-		else if("BACKEND_OFFLINE".equals(s)){
-			Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
-					"\n Our servers seem to be offline!", Toast.LENGTH_LONG).show();
-			keepChecking(this);
-		}
-		else {
-			Toast.makeText(getBaseContext(), "There is no city with this name on Earth! " +
-					"\n Or there are no places in this city!", Toast.LENGTH_LONG).show();
-		}
-		return null;
-	}
+		Log.d(TAG,"Results of ConnectionStatusCheck: "+INTERNET+" VS "+s[0]+" & "+BACKEND+" VS "+s[1]);
+		String first = " ";
+		if(!s[2].isEmpty()) first = s[2];
+		if("OFFLINE".equals(s[0])){
+			if("ONLINE".equals(INTERNET) || "FIRST_RUN".equals(first)){
+				// és el pas : de online a offline
+				Toast.makeText(getBaseContext(), "Connectivity issues! " +
+						"\n You seem to be offline!", Toast.LENGTH_SHORT).show();
+				INTERNET = "OFFLINE";
+			}
+			checkConnections("SLEEP",this);
 
-	@Override
-	public String onKeepChecking(String s) {
-		// we are back in the game : ONLINE
-		// dirty bits should do the job
-		if("ONLINE".equals(BACKEND_MODE))dirtyVotesUpdate();
-		// - last searchedName should be called
-		dirtySearchUpdate();
-		return null;
+		}
+		else if("ONLINE".equals(s[0])){
+			if("OFFLINE".equals(INTERNET)|| "FIRST_RUN".equals(first)) {
+				// és el pas : de offline a online
+				Toast.makeText(getBaseContext(), " Connectivity checked " +
+						"\n You are online!", Toast.LENGTH_SHORT).show();
+				dirtyVotesUpdate();
+			}
+			INTERNET = "ONLINE";
+
+
+		}
+		if("OFFLINE".equals(s[1])){
+			if("ONLINE".equals(BACKEND)|| "FIRST_RUN".equals(first)){
+				// és el pas : de online a offline
+				Toast.makeText(getBaseContext(), "Server issues! " +
+						"\n Some of our servers seem to be offline!", Toast.LENGTH_SHORT).show();
+			}
+			BACKEND = "OFFLINE";
+			checkConnections("SLEEP",this);
+		}
+		else if("ONLINE".equals(s[1])){
+			if("OFFLINE".equals(BACKEND)|| "FIRST_RUN".equals(first)){
+				// és el pas : de offline a online
+				Toast.makeText(getBaseContext(), "Server available! " +
+						"\n Our servers are online !", Toast.LENGTH_SHORT).show();
+				dirtyVotesUpdate();
+			}
+			BACKEND = "ONLINE";
+		}
 	}
 
 	private void dirtySearchUpdate() {
@@ -669,12 +689,16 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private void dirtyVotesUpdate() {
 		//Toast, Good news everyone, connection is back. Your votes are being uploaded!
 		SharedPreferences sharedprf = context.getSharedPreferences("DirtyVoteCache",Context.MODE_PRIVATE);
+		Log.d(TAG,"dirty evoked");
 		if(sharedprf != null) {
+			Log.d(TAG,"dirty not empty");
 			SharedPreferences.Editor ed = sharedprf.edit();
 			Map<String, String> dirtyVoteCache = (Map<String, String>) sharedprf.getAll();
 			for (Map.Entry<String, String> entry : dirtyVoteCache.entrySet()) {
 				String key = entry.getKey();
+				Log.d(TAG, "this is the four_id: " +key);
 				String nvl = entry.getValue();
+				Log.d(TAG, nvl+ " of place: "+key+" is beeing updated to the server");
 				String setValofd = "https://mobserv.herokuapp.com/valorations/newfour";
 				String args[] = new String []{setValofd,nvl};
 				new PostConnection(this).execute(args);
@@ -683,11 +707,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 	}
 
-	public String keepChecking(MapsActivity mapsActivity) {
-		BACKEND_MODE = "OFFLINE"; // INTERNET might be offline too, but rest!
-		new KeepCheckingConnection(this).execute();
-		return null;
-	}
 
 	public void afterVote(JSONObject result, Activity mapsActivity) {
 		if(result != null) {
@@ -697,7 +716,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		else{
 			Toast.makeText(getBaseContext(), "We are experiencing connection problems! " +
 					"\n your vote will be saved ASAP!", Toast.LENGTH_SHORT).show();
-			keepChecking(this);
+			//
+			checkConnections("SLEEP",this);
 		}
 	}
 
