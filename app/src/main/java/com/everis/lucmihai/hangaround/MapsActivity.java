@@ -641,14 +641,17 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		// BACK FROM connectionSratusCheck(s is final)
 		Log.d(TAG,"Results of ConnectionStatusCheck: "+INTERNET+" VS "+s[0]+" & "+BACKEND+" VS "+s[1]);
 		String first = " ";
-		if(!s[2].isEmpty()) first = s[2];
+		if(!s[2].isEmpty()) {
+			first = s[2];
+		}
 		if("OFFLINE".equals(s[0])){
 			if("ONLINE".equals(INTERNET) || "FIRST_RUN".equals(first)){
 				// és el pas : de online a offline
 				Toast.makeText(getBaseContext(), "Connectivity issues! " +
 						"\n You seem to be offline!", Toast.LENGTH_SHORT).show();
-				INTERNET = "OFFLINE";
+
 			}
+			INTERNET = "OFFLINE";
 			checkConnections("SLEEP",this);
 
 		}
@@ -666,7 +669,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		if("OFFLINE".equals(s[1])){
 			if("ONLINE".equals(BACKEND)|| "FIRST_RUN".equals(first)){
 				// és el pas : de online a offline
-				Toast.makeText(getBaseContext(), "Server issues! " +
+				Toast.makeText(getBaseContext(), " Server issues! " +
 						"\n Some of our servers seem to be offline!", Toast.LENGTH_SHORT).show();
 			}
 			BACKEND = "OFFLINE";

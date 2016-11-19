@@ -82,9 +82,6 @@ public  class PostConnection extends AsyncTask<String, Process, JSONObject> {
 			e.printStackTrace();
 			response.body().close();
 		}
-		finally {
-			if(response.body() != null)response.body().close();
-		}
 		return result;
 	}
 

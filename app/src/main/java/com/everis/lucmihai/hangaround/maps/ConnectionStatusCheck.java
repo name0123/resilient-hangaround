@@ -52,6 +52,7 @@ public class ConnectionStatusCheck extends AsyncTask<String, Process, String[]> 
 		result[1] = "OFFLINE"; // backend
 		result[2] = args[0];    // first run or sleep?
  		OkHttpClient client = new OkHttpClient();
+
 		Request requestG = new Request.Builder().url("http://google.com").build();
 		Request requestB = new Request.Builder().url("http://mobserv.herokuapp.com/places/getall").build();
 		Response response = null;
