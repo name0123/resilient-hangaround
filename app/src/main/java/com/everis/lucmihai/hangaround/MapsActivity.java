@@ -8,9 +8,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,9 +23,12 @@ import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -55,6 +59,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import butterknife.OnClick;
@@ -69,9 +75,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		LocationListener {
 
 	private GoogleMap mGoogleMap;
-	private SupportMapFragment mapFragment;
-	private Geocoder geocoder;
-	private Location location;
 	private Context context;
 	private boolean loggedIn = false; // too hard coded!
 	private static final String TAG = "KarambaMaps";
@@ -88,12 +91,14 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private JSONArray places = null;
 	private String BACKEND = "OFFLINE";
 	private String INTERNET = "OFFLINE";
+	private List<FourPlace> myPlaces = new ArrayList<>();
 
-	SupportMapFragment mapFrag;
-	LocationRequest mLocationRequest;
-	GoogleApiClient mGoogleApiClient;
-	Location mLastLocation;
-	Marker mCurrLocationMarker;
+	private SupportMapFragment mapFrag;
+	private LocationRequest mLocationRequest;
+	private GoogleApiClient mGoogleApiClient;
+	private Location mLastLocation;
+	private Marker mCurrLocationMarker;
+	private Location location;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -121,8 +126,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			Button lgnButton = (Button) findById(R.id.blogin);
 			lgnButton.setText("Welcome \n"+userLog);
 		}
-
-
 	}
 
 	@Override
@@ -407,7 +410,67 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
         dialog.show();
     }
 
-	public void showPlaceValorationDialog(final Marker marker, final int index) {
+	@OnClick(R.id.voteOffline)
+	public void showOfflineValorationDialog(View view) {
+		Log.e(TAG, "Hola");
+		TextView nr = (TextView) findViewById(R.id.nrPlace);
+		final int index = Integer.parseInt(nr.getText().toString());
+		TextView place = (TextView) findViewById(R.id.place);
+		String pln = place.getText().toString();
+
+		LayoutInflater inflater = getLayoutInflater();
+		View alertLayout = inflater.inflate(R.layout.valoration_dialog, null);
+		final Spinner spGenAccess = (Spinner) alertLayout.findViewById(R.id.spgena);
+		final Spinner spWcAccess = (Spinner) alertLayout.findViewById(R.id.spwca);
+		final Spinner spElev = (Spinner) alertLayout.findViewById(R.id.spElev);
+		String placeCategory = "";
+/*		Log.d(TAG, " This is the marker: "+marker.toString());
+		Log.d(TAG, " This is the index: "+index);
+		Log.d(TAG, " This is places's length: "+places.length());*/
+
+
+
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		alert.setTitle(pln);
+		alert.setView(alertLayout);
+		alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				//Toast.makeText(getBaseContext(), "Cancel clicked", Toast.LENGTH_SHORT).show();
+			}
+		});
+
+		alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				ValorFourId newValPlace = new ValorFourId();
+				// break here; print places, and print marker
+				try{
+					JSONObject place = places.getJSONObject(index);
+					newValPlace.uid = "misho0stequer2@gmail.com"; // user_id: hardcoded provisional
+					newValPlace.four_id = place.getString("four_id"); // or venue_id
+					newValPlace.ac = Boolean.valueOf(spGenAccess.getSelectedItem().toString());
+					newValPlace.wc = Boolean.valueOf(spWcAccess.getSelectedItem().toString());
+					newValPlace.el = Elev.valueOf(spElev.getSelectedItem().toString());
+
+					//Log.i(TAG,newValPlace.el.toString());
+					ObjectMapper mapper = new ObjectMapper();
+					String newValPlaceJson = mapper.writeValueAsString(newValPlace);
+					Log.e(TAG, "Json stuff: "+newValPlaceJson.toString());
+					votePlace(newValPlaceJson,place.getString("four_id"),index,MapsActivity.this);
+
+				}catch (Exception e){
+					// TODO: handling needed!
+					e.printStackTrace();
+					Log.d(TAG," ahora hay un problema grodo!");
+				}
+			}
+		});
+		AlertDialog dialog = alert.create();
+		dialog.show();
+	}
+
+	public void showPlaceInfoDialog(final Marker marker, final int index) {
 		LayoutInflater inflater = getLayoutInflater();
 		View alertLayout = inflater.inflate(R.layout.place_valoration_dialog, null);
 		TextView adaptedLevel = (TextView) alertLayout.findViewById(R.id.tvga);
@@ -524,7 +587,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			    e.printStackTrace();
 		    }
 	    }
-	    if(index != -1) showPlaceValorationDialog(marker, index);
+	    if(index != -1) showPlaceInfoDialog(marker, index);
     }
 
     private void showGuestOptions(){
@@ -630,7 +693,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			INTERNET = "OFFLINE";
 			BACKEND = "OFFLINE";
 			String nonp = checkConnections("SLEEP",this);
-			Log.d(TAG, "something just happened!"+nonp);
+			Toast.makeText(getBaseContext(), "Connectivity issues! " +
+					"\n You seem to be offline!", Toast.LENGTH_SHORT).show();
 		}
 	}
 
@@ -641,50 +705,24 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		Log.e(TAG, "INTERNET: "+INTERNET+" VS "+s[0]);
 		Log.e(TAG, "BACKEND: "+BACKEND+" VS "+s[1]);
 
-		if("OFFLINE".equals(s[0])){
-			if("ONLINE".equals(INTERNET)){
-				// és el pas : de online a offline
-				Toast.makeText(getBaseContext(), "Connectivity issues! " +
-						"\n You seem to be offline!", Toast.LENGTH_SHORT).show();
-
-			}
-			INTERNET = "OFFLINE";
-			checkConnections("SLEEP",this);
-
-		}
-		if("ONLINE".equals(s[0])){
-			if("OFFLINE".equals(INTERNET) ) {
-				// és el pas : de offline a online
-				Toast.makeText(getBaseContext(), " Connectivity checked " +
-						"\n You are online!", Toast.LENGTH_SHORT).show();
-				dirtyVotesUpdate();
-			}
+		if("ONLINE".equals(s[0]) &&  "ONLINE".equals(s[1])){
+			// estamos online
 			INTERNET = "ONLINE";
-
-
-		}
-		if("OFFLINE".equals(s[1])){
-			if("ONLINE".equals(BACKEND)){
-				// és el pas : de online a offline
-				Toast.makeText(getBaseContext(), " Server issues! " +
-						"\n Some of our servers seem to be offline!", Toast.LENGTH_SHORT).show();
-			}
-			BACKEND = "OFFLINE";
-			checkConnections("SLEEP",this);
-		}
-		if("ONLINE".equals(s[1])){
-			if("OFFLINE".equals(BACKEND)){
-				// és el pas : de offline a online
-				Toast.makeText(getBaseContext(), "Server available! " +
-						"\n Our servers are online !", Toast.LENGTH_SHORT).show();
-
-			}
-			dirtyVotesUpdate();
 			BACKEND = "ONLINE";
+			Toast.makeText(getBaseContext(), "Connectivity checked " +
+					"\n You are online!", Toast.LENGTH_SHORT).show();
+			dirtyVotesUpdate();
+		}
+		else {
+			INTERNET = "OFFLINE";
+			BACKEND = "OFFLINE";
+			checkConnections("SLEEP", this);
 		}
 	}
 
 	private void dirtySearchUpdate() {
+		// no value really in doing this
+
 	}
 
 	private void dirtyVotesUpdate() {
@@ -813,16 +851,81 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			Toast.makeText(this, "Sorry: No places found!", Toast.LENGTH_LONG).show();
 		}
 	}
+
+	public boolean isOnline(Activity a) {
+		ConnectivityManager cm =
+				(ConnectivityManager) a.getSystemService(a.getApplicationContext().CONNECTIVITY_SERVICE);
+		NetworkInfo netInfo = cm.getActiveNetworkInfo();
+		return netInfo != null && netInfo.isConnectedOrConnecting();
+	}
+
 	// cache places at this point
 	public void showPlaces(JSONArray places, Activity activity) {
 		// this is called after getting the addptedLevel for every place in places - on get done! in go.
 		//Log.e(TAG,"showing places with markers: "+ String.valueOf(places!=null));
 		if (places != null) {
 			//Log.e(TAG,"showing places with markers"+places.length());
-			for (int i = 0; i < places.length(); ++i) {
-				showMarker(i);
+			if(isOnline(this)){
+				for (int i = 0; i < places.length(); ++i) {
+					showMarker(i);
+				}
 			}
+			else{
+				// estamos en modo offline: tiramos de cache i del offline_map_layout
+				// Tr1  - only fragment
+				Log.d(TAG, "try to switch views");
+				getSupportFragmentManager().beginTransaction().hide(mapFrag).commit();
+				setContentView(R.layout.offline_main);
+				populateList(activity);
+				Log.d(TAG, "views switched, alright");
+
+
+				// Try2 intent -> new activity
+				/*Intent intent = new Intent(context, OfflineActivity.class);
+				startActivity(intent);
+*/
+			}
+
 		}
+	}
+	private class FourPlace{
+		int index;
+		String name;
+		String adapted;
+		Button vote;
+		public FourPlace(int i, String n, String a, Button v ){
+			this.index = i;
+			this.name = n;
+			this.adapted = a;
+			this.vote = v;
+		}
+	}
+
+	private void populateList(Activity activity) {
+		Log.d(TAG, "Populating List: "+places.toString());
+		myPlaces = new ArrayList<>();
+		for(int i = 0; i < places.length(); ++i){
+			// populating array
+			String name = "name";
+			String adapt = "adapt";
+			Button but = new Button(this); // store four_id in attributes attrs
+			but.setText("VOTE "+String.valueOf(i));
+			FourPlace p = new FourPlace(1,"a","a",but);
+			try{
+				JSONObject place = (JSONObject) places.get(i);
+				name = place.getString("name");
+				adapt = place.getString("adaptedLevel");
+				p = new FourPlace(i,name,adapt,but);
+
+			} catch (Exception e){
+				e.printStackTrace();
+			}
+			myPlaces.add(p);
+		}
+		// populating list view
+		ArrayAdapter<FourPlace> adapter = new MyListAdapter(myPlaces);
+		ListView list =(ListView) findViewById(R.id.placesList);
+		list.setAdapter(adapter);
 	}
 
 	/**
@@ -1044,5 +1147,39 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				}
 			}
 		}).start();
+	}
+
+	private class MyListAdapter extends ArrayAdapter<FourPlace> {
+
+		/**
+		 * Constructor
+		 *@param pls places in list
+		 *
+		 */
+		public MyListAdapter(List<FourPlace> pls) {
+			super(MapsActivity.this, R.layout.offline_place,pls);
+		}
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent){
+			View itemView = convertView;
+			if(itemView == null){
+				itemView = getLayoutInflater().inflate(R.layout.offline_place,parent,false);
+			}
+			FourPlace fourPlace = myPlaces.get(position);
+
+			TextView name = (TextView) itemView.findViewById(R.id.place);
+			name.setText(fourPlace.name);
+
+			TextView nr = (TextView) itemView.findViewById(R.id.nrPlace);
+			nr.setText(String.valueOf(fourPlace.index));
+
+			TextView adapt = (TextView) itemView.findViewById(R.id.adapt);
+			adapt.setText(fourPlace.adapted);
+
+			Button but = (Button) itemView.findViewById(R.id.voteOffline);
+			but.setText(fourPlace.vote.getText());
+			return itemView;
+			//return super.getView(position,convertView,parent);
+		}
 	}
 }

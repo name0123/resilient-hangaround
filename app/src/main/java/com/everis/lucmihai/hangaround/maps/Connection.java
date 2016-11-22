@@ -67,13 +67,11 @@ public class Connection extends AsyncTask<Object, Process, JSONArray> {
 				resp = response.body().string();
 				Log.e(TAG, "This is resp:"+resp);
 				if(!resp.isEmpty())result = new JSONArray(resp);
+				response.body().close();
 			}
 		} catch (Exception e) {
 			Log.d(TAG, "Error connection: ");
 			e.printStackTrace();
-		}
-		finally {
-			response.body().close();
 		}
 		Log.d(TAG, "The return of the Result: "+result);
 		return result;
