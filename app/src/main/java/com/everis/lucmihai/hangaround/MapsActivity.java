@@ -576,14 +576,14 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		else{
 			// the searchedLocation may not have places, or the connection could be the problem: new aspect on funciton
-			String nonp = checkConnections("no sleep",this);
+			String nonp = checkConnections("SLEEP",this);
 			Log.d(TAG, "No places found: "+nonp);
 
 		}
     }
 
 	public String checkConnections(String sleep, Activity mapsActivity) {
-		String[] args = new String[]{sleep};
+		Object[] args = new Object[]{sleep,mapsActivity};
 		new ConnectionStatusCheck(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,args);
 		return "CHECKING CONNECTIONS";
 	}
@@ -612,8 +612,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				showPlaces(places, this);
 				count = 0;
 			}
-
-
 		}
 		catch (Exception e)
 		{
@@ -631,7 +629,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		else {
 			INTERNET = "OFFLINE";
 			BACKEND = "OFFLINE";
-			String nonp = checkConnections("NO_SLEEP",this);
+			String nonp = checkConnections("SLEEP",this);
 			Log.d(TAG, "something just happened!"+nonp);
 		}
 	}
@@ -639,13 +637,12 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	@Override
 	public void onConnectionStatusCheck(String[] s) {
 		// BACK FROM connectionSratusCheck(s is final)
-		Log.d(TAG,"Results of ConnectionStatusCheck: "+INTERNET+" VS "+s[0]+" & "+BACKEND+" VS "+s[1]);
-		String first = " ";
-		if(!s[2].isEmpty()) {
-			first = s[2];
-		}
+		Log.d(TAG,"Results of ConnectionStatusCheck: ");
+		Log.e(TAG, "INTERNET: "+INTERNET+" VS "+s[0]);
+		Log.e(TAG, "BACKEND: "+BACKEND+" VS "+s[1]);
+
 		if("OFFLINE".equals(s[0])){
-			if("ONLINE".equals(INTERNET) || "FIRST_RUN".equals(first)){
+			if("ONLINE".equals(INTERNET)){
 				// és el pas : de online a offline
 				Toast.makeText(getBaseContext(), "Connectivity issues! " +
 						"\n You seem to be offline!", Toast.LENGTH_SHORT).show();
@@ -655,8 +652,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			checkConnections("SLEEP",this);
 
 		}
-		else if("ONLINE".equals(s[0])){
-			if("OFFLINE".equals(INTERNET)|| "FIRST_RUN".equals(first)) {
+		if("ONLINE".equals(s[0])){
+			if("OFFLINE".equals(INTERNET) ) {
 				// és el pas : de offline a online
 				Toast.makeText(getBaseContext(), " Connectivity checked " +
 						"\n You are online!", Toast.LENGTH_SHORT).show();
@@ -667,7 +664,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 		}
 		if("OFFLINE".equals(s[1])){
-			if("ONLINE".equals(BACKEND)|| "FIRST_RUN".equals(first)){
+			if("ONLINE".equals(BACKEND)){
 				// és el pas : de online a offline
 				Toast.makeText(getBaseContext(), " Server issues! " +
 						"\n Some of our servers seem to be offline!", Toast.LENGTH_SHORT).show();
@@ -675,13 +672,14 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			BACKEND = "OFFLINE";
 			checkConnections("SLEEP",this);
 		}
-		else if("ONLINE".equals(s[1])){
-			if("OFFLINE".equals(BACKEND)|| "FIRST_RUN".equals(first)){
+		if("ONLINE".equals(s[1])){
+			if("OFFLINE".equals(BACKEND)){
 				// és el pas : de offline a online
 				Toast.makeText(getBaseContext(), "Server available! " +
 						"\n Our servers are online !", Toast.LENGTH_SHORT).show();
-				dirtyVotesUpdate();
+
 			}
+			dirtyVotesUpdate();
 			BACKEND = "ONLINE";
 		}
 	}
@@ -694,9 +692,10 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		SharedPreferences sharedprf = context.getSharedPreferences("DirtyVoteCache",Context.MODE_PRIVATE);
 		Log.d(TAG,"dirty evoked");
 		if(sharedprf != null) {
-			Log.d(TAG,"dirty not empty");
+			Log.d(TAG,"dirty not null");
 			SharedPreferences.Editor ed = sharedprf.edit();
 			Map<String, String> dirtyVoteCache = (Map<String, String>) sharedprf.getAll();
+			if(!dirtyVoteCache.isEmpty()) Log.d(TAG, "dirty not empty");
 			for (Map.Entry<String, String> entry : dirtyVoteCache.entrySet()) {
 				String key = entry.getKey();
 				Log.d(TAG, "this is the four_id: " +key);

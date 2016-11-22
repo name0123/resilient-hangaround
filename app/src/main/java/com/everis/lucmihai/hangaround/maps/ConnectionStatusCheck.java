@@ -1,5 +1,8 @@
 package com.everis.lucmihai.hangaround.maps;
 
+import android.app.Activity;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -15,7 +18,7 @@ import okhttp3.Response;
  * Created by lucmihai on 18/11/2016.
  */
 
-public class ConnectionStatusCheck extends AsyncTask<String, Process, String[]> {
+public class ConnectionStatusCheck extends AsyncTask<Object, Process, String[]> {
 
 	private static final String TAG = "CheckStatusCheck";
 
@@ -45,52 +48,54 @@ public class ConnectionStatusCheck extends AsyncTask<String, Process, String[]> 
 	@Override
 	protected void onPreExecute() {}
 
+	public boolean isOnline(Activity a) {
+		ConnectivityManager cm =
+				(ConnectivityManager) a.getSystemService(a.getApplicationContext().CONNECTIVITY_SERVICE);
+		NetworkInfo netInfo = cm.getActiveNetworkInfo();
+		return netInfo != null && netInfo.isConnectedOrConnecting();
+	}
+
 	@Override
-	public String[] doInBackground(String... args) {
+	public String[] doInBackground(Object... args) {
 		String[] result = new String[3];
 		result[0] = "OFFLINE"; // internet
+		Activity a = (Activity) args[1];
 		result[1] = "OFFLINE"; // backend
-		result[2] = args[0];    // first run or sleep?
- 		OkHttpClient client = new OkHttpClient();
-
-		Request requestG = new Request.Builder().url("http://google.com").build();
+		result[2] = String.valueOf(args[0]);    // first run or sleep?
+		OkHttpClient client = new OkHttpClient();
 		Request requestB = new Request.Builder().url("http://mobserv.herokuapp.com/places/getall").build();
 		Response response = null;
-		Response response1 = null;
-		Call call = client.newCall(requestG);
-		Call call1 = client.newCall(requestB);
-		try {
-			response = call.execute();
-			int gcode = response.code();
-			Log.e(TAG, "Check connection to google code: "+gcode);
-			if(gcode >= 200 && gcode < 400) {
-				// internet is fine
-				response.body().close();
-				OkHttpClient client1 = new OkHttpClient();
-				result[0] = "ONLINE";
-				response1 = call1.execute();
-				int bcode = response1.code();
+		Call call = client.newCall(requestB);
+		Log.e(TAG, "Check connection to google code: "+isOnline(a));
+
+		if(isOnline(a)) {
+			result[0] = "ONLINE";
+			try {
+				response = call.execute();
+				int bcode = response.code();
 				Log.e(TAG, "Check connection to backend code: "+bcode);
 				if(bcode >= 200 && bcode < 400) result[1] = "ONLINE:";
-				response1.body().close();
-				if("SLEEP".equals(args[0])) {
+				response.body().close();
+
+				if("SLEEP".equals(args[0])) { // should move it in finally
 					Log.e(TAG, "Before you sleep!");
 					try {
 						call.cancel(); // ya volveremos, si hace falta
-						call1.cancel();
 						Log.e(TAG, "Went to sleep");
-						TimeUnit.SECONDS.sleep(10);
+						TimeUnit.SECONDS.sleep(15);
 						Log.e(TAG, "Come from sleep");
-
 					} catch (InterruptedException ex) {
+						Log.e(TAG, "error de sleep");
 						ex.printStackTrace();
 						Thread.currentThread().interrupt();
 					}
 				}
 			}
+			catch (IOException e) {
+				Log.e(TAG, "error de call");
+				e.printStackTrace();
+			}
 			return result;
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 		return result;
 	}

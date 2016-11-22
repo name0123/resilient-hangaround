@@ -74,13 +74,13 @@ public  class PostConnection extends AsyncTask<String, Process, JSONObject> {
 				Log.e(TAG, "No connection, try to cancel!");
 				call.cancel(); // ??
 				response.body().close();
-				return null;
+				return result;
 
 			}
 		} catch (Exception e) {
 			Log.d(TAG, "Connection error");
 			e.printStackTrace();
-			response.body().close();
+
 		}
 		return result;
 	}
