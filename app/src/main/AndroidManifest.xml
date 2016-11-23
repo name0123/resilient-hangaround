@@ -13,7 +13,9 @@
         android:allowBackup="true"
         android:launchMode="singleTop"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:icon="@mipmap/ic_launcher"
+        >
 
         <!--
              The API key for Google Maps-based APIs is defined as a string resource.

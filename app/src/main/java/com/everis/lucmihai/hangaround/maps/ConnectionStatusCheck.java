@@ -74,7 +74,10 @@ public class ConnectionStatusCheck extends AsyncTask<Object, Process, String[]> 
 				response = call.execute();
 				int bcode = response.code();
 				Log.e(TAG, "Check connection to backend code: "+bcode);
-				if(bcode >= 200 && bcode < 400) result[1] = "ONLINE";
+				if(bcode >= 200 && bcode < 400) {
+					result[1] = "ONLINE";
+					result[2] = "NO NEED TO SLEEP";
+				}
 				response.body().close();
 				call.cancel(); // ya volveremos, si hace falta
 			}catch (IOException e) {
@@ -82,12 +85,11 @@ public class ConnectionStatusCheck extends AsyncTask<Object, Process, String[]> 
 				e.printStackTrace();
 			}
 		}
-		if("SLEEP".equals(args[0])) { // should move it in finally
+		if("SLEEP".equals(result[2])) { // should move it in finally
 			Log.e(TAG, "Before you sleep!");
 			try {
-
 				Log.e(TAG, "Went to sleep");
-				TimeUnit.SECONDS.sleep(15);
+				TimeUnit.SECONDS.sleep(5);
 				Log.e(TAG, "Come from sleep");
 			} catch (InterruptedException ex) {
 				Log.e(TAG, "error de sleep");

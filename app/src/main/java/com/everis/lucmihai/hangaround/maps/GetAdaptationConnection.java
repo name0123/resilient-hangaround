@@ -61,9 +61,6 @@ public class GetAdaptationConnection extends AsyncTask<String, Process, String> 
 			Log.d(TAG, "Error connection: ");
 			e.printStackTrace();
 		}
-		finally {
-			response.body().close();
-		}
 		return result;
 	}
 

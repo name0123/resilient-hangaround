@@ -173,7 +173,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				== PackageManager.PERMISSION_GRANTED) {
 			LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
 			if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER )) {
-				showGpsEnable();
+				//showGpsEnable();
 
 			}
 		}
@@ -411,8 +411,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
     }
 
 	@OnClick(R.id.voteOffline)
-	public void showOfflineValorationDialog(View view) {
-		Log.e(TAG, "Hola");
+	public void showOfflineValorationDialog(final View view) {
+		// need to change text, and change background
+		// put back search bar
 		TextView nr = (TextView) findViewById(R.id.nrPlace);
 		final int index = Integer.parseInt(nr.getText().toString());
 		TextView place = (TextView) findViewById(R.id.place);
@@ -457,7 +458,9 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 					ObjectMapper mapper = new ObjectMapper();
 					String newValPlaceJson = mapper.writeValueAsString(newValPlace);
 					Log.e(TAG, "Json stuff: "+newValPlaceJson.toString());
+
 					votePlace(newValPlaceJson,place.getString("four_id"),index,MapsActivity.this);
+
 
 				}catch (Exception e){
 					// TODO: handling needed!
@@ -712,11 +715,13 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			Toast.makeText(getBaseContext(), "Connectivity checked " +
 					"\n You are online!", Toast.LENGTH_SHORT).show();
 			dirtyVotesUpdate();
+			checkConnections("SLEEP",this);
 		}
 		else {
 			INTERNET = "OFFLINE";
 			BACKEND = "OFFLINE";
 			checkConnections("SLEEP", this);
+			// maybe change the view where, automatically
 		}
 	}
 
@@ -876,6 +881,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 				Log.d(TAG, "try to switch views");
 				getSupportFragmentManager().beginTransaction().hide(mapFrag).commit();
 				setContentView(R.layout.offline_main);
+
 				populateList(activity);
 				Log.d(TAG, "views switched, alright");
 
@@ -924,13 +930,13 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		// populating list view
 		ArrayAdapter<FourPlace> adapter = new MyListAdapter(myPlaces);
+		//NestedScrollView list = (NestedScrollView)
 		ListView list =(ListView) findViewById(R.id.placesList);
+		list.setNestedScrollingEnabled(true);
 		list.setAdapter(adapter);
 	}
 
-	/**
-	 *      interesting soultion, to update markers, no aspects triggered 20 times!
-	 *
+	/**interesting soultion, to update markers, no aspects triggered 20 times!
 	 * @param places
 	 */
 	public void updatePlaces(JSONArray places) {
@@ -996,7 +1002,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		try {
 			//Log.d(TAG, " Getting adaption level for: "+places.get(i).toString());
 			String args[] = new String[]{surl, places.get(i).toString(), String.valueOf(i)};
-			new GetAdaptationConnection(this).execute(args);
+			new GetAdaptationConnection(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,args);
 		}
 		catch (Exception e){
 			e.printStackTrace();
@@ -1067,6 +1073,34 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		Intent intent = new Intent(MapsActivity.this, LoginActivity.class);
 		startActivity(intent);
 	}
+	@OnClick(R.id.bosearch)
+	public void onOfflineClickSearch(View view){
+		if("ONLINE".equals(INTERNET) && "ONLINE".equals(BACKEND)){
+			// TORNEM AL MAPS
+			View views = (View) findViewById(R.id.offline);
+			views.setVisibility(View.GONE);
+			setContentView(R.layout.activity_maps);
+			/*View thisView = (View) findViewById(R.id.online);
+			thisView.setVisibility(View.VISIBLE);*/
+			onClickSearch(view);
+		}
+		else{
+			places = null;
+			InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+			imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+			EditText searchedText = (EditText) findViewById(R.id.txtsearch);
+			String searchedLocation = searchedText.getText().toString();
+			places = getPlacesName(searchedLocation, this);
+			if(places != null){
+				populateList(MapsActivity.this);
+			}
+			else{
+				Toast.makeText(getBaseContext(), "Connectivity issues! " +
+						"\n Ths place cannot be found not in cache!", Toast.LENGTH_SHORT).show();
+			}
+
+		}
+	}
 
     @OnClick(R.id.bsearch)
     public void onClickSearch(View view){
@@ -1085,27 +1119,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		    go();
 		    showPlaces(places, this);
 	    }
-	    // else > cb will do its job when places is initialized by
-	    // TODO: some cases here if shearchedLocation is address, place, city country ...etc
-
-	    /* https://developer.android.com/reference/android/location/Geocoder.html
-        try {
-           //Address address = (Address) geocoder.getFromLocationName(searchedLocation,1); cool
-            geocoder = new Geocoder(this);
-            List<android.location.Address> addresses = geocoder.getFromLocationName(searchedLocation,1);
-            if(addresses.size() > 0) {
-
-                double latitude= addresses.get(0).getLatitude();
-                double longitude= addresses.get(0).getLongitude();
-                //getPlaces(latitude,longitude);
-
-            }
-        }
-        catch(Exception e){
-            e.printStackTrace();
-        }
-            No required anymore, if you search by name, less dependecies!
-        */
     }
 
 	private void cacheSearch(String searchedLocation) {
@@ -1177,7 +1190,14 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			adapt.setText(fourPlace.adapted);
 
 			Button but = (Button) itemView.findViewById(R.id.voteOffline);
-			but.setText(fourPlace.vote.getText());
+			String adapted = fourPlace.vote.getText().toString();
+			/* NO WORK!
+			int cols = 0x1EC4DC;
+			if(adapted.equals(SUNADAPTED)) cols = 0xE74C3C;
+			else if(adapted.equals(SPARTIAL)) cols = 0xFFF68F;
+			else if(adapted.equals(STOTAL)) cols = 0x008744;
+			but.getBackground().setColorFilter(cols, PorterDuff.Mode.LIGHTEN);*/
+			but.setText(adapted);
 			return itemView;
 			//return super.getView(position,convertView,parent);
 		}
