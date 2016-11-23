@@ -89,7 +89,7 @@ public class ConnectionStatusCheck extends AsyncTask<Object, Process, String[]> 
 			Log.e(TAG, "Before you sleep!");
 			try {
 				Log.e(TAG, "Went to sleep");
-				TimeUnit.SECONDS.sleep(5);
+				TimeUnit.SECONDS.sleep(10);
 				Log.e(TAG, "Come from sleep");
 			} catch (InterruptedException ex) {
 				Log.e(TAG, "error de sleep");

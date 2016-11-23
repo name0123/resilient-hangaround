@@ -32,6 +32,7 @@ import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ViewFlipper;
 
 import com.everis.lucmihai.hangaround.maps.AsyncTaskCompleteListener;
 import com.everis.lucmihai.hangaround.maps.Connection;
@@ -99,11 +100,13 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private Location mLastLocation;
 	private Marker mCurrLocationMarker;
 	private Location location;
+	private ViewFlipper viewFlipper;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_maps);
+		setContentView(R.layout.maps);
+		viewFlipper = (ViewFlipper) findViewById(R.id.viewflipper);
 		context = getApplicationContext();
 		context.getSharedPreferences("SearchCache",Context.MODE_ENABLE_WRITE_AHEAD_LOGGING);
 		context.getSharedPreferences("DirtyVoteCache",Context.MODE_ENABLE_WRITE_AHEAD_LOGGING);
@@ -650,7 +653,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 	public String checkConnections(String sleep, Activity mapsActivity) {
 		Object[] args = new Object[]{sleep,mapsActivity};
-		new ConnectionStatusCheck(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,args);
+		new ConnectionStatusCheck(this).execute(args);
 		return "CHECKING CONNECTIONS";
 	}
 
@@ -710,24 +713,28 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 		if("ONLINE".equals(s[0]) &&  "ONLINE".equals(s[1])){
 			// estamos online
+			if("OFFLINE".equals(INTERNET) &&  "OFFLINE".equals(BACKEND)){
+				// canvi de offline a online, to the toast i dirtyVotesUpdate()
+				Toast.makeText(getBaseContext(), "Connectivity checked " +
+						"\n You are online!", Toast.LENGTH_SHORT).show();
+				dirtyVotesUpdate();
+				viewFlipper.showPrevious();
+			}
 			INTERNET = "ONLINE";
 			BACKEND = "ONLINE";
-			Toast.makeText(getBaseContext(), "Connectivity checked " +
-					"\n You are online!", Toast.LENGTH_SHORT).show();
-			dirtyVotesUpdate();
-			checkConnections("SLEEP",this);
+			//checkConnections("SLEEP",this); this is buggy
 		}
 		else {
 			INTERNET = "OFFLINE";
 			BACKEND = "OFFLINE";
 			checkConnections("SLEEP", this);
+			viewFlipper.showNext();
 			// maybe change the view where, automatically
 		}
 	}
 
 	private void dirtySearchUpdate() {
 		// no value really in doing this
-
 	}
 
 	private void dirtyVotesUpdate() {
@@ -877,19 +884,10 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			}
 			else{
 				// estamos en modo offline: tiramos de cache i del offline_map_layout
-				// Tr1  - only fragment
 				Log.d(TAG, "try to switch views");
-				getSupportFragmentManager().beginTransaction().hide(mapFrag).commit();
-				setContentView(R.layout.offline_main);
-
+				viewFlipper.showPrevious();
 				populateList(activity);
 				Log.d(TAG, "views switched, alright");
-
-
-				// Try2 intent -> new activity
-				/*Intent intent = new Intent(context, OfflineActivity.class);
-				startActivity(intent);
-*/
 			}
 
 		}
@@ -1077,18 +1075,14 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public void onOfflineClickSearch(View view){
 		if("ONLINE".equals(INTERNET) && "ONLINE".equals(BACKEND)){
 			// TORNEM AL MAPS
-			View views = (View) findViewById(R.id.offline);
-			views.setVisibility(View.GONE);
-			setContentView(R.layout.activity_maps);
-			/*View thisView = (View) findViewById(R.id.online);
-			thisView.setVisibility(View.VISIBLE);*/
+			viewFlipper.showPrevious();
 			onClickSearch(view);
 		}
 		else{
 			places = null;
 			InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 			imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-			EditText searchedText = (EditText) findViewById(R.id.txtsearch);
+			EditText searchedText = (EditText) findViewById(R.id.txtosearch);
 			String searchedLocation = searchedText.getText().toString();
 			places = getPlacesName(searchedLocation, this);
 			if(places != null){
@@ -1116,6 +1110,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	    places = getPlacesName(searchedLocation, this);
 	    // if cached > places has the places > so we can show them
 	    if(places != null) {
+		    viewFlipper.showNext();
 		    go();
 		    showPlaces(places, this);
 	    }

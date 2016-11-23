@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:orientation="vertical"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+
+    <ViewFlipper
+        android:id="@+id/viewflipper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="1dp" >
+
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:gravity="center"
+            android:orientation="vertical" >
+
+            <android.support.v7.widget.Toolbar
+                android:id="@+id/search_bar"
+                android:icon="@android:drawable/ic_menu_search"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorPrimary"
+                android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+                app:popupTheme="@style/ThemeOverlay.AppCompat"
+                app:showAsAction="always"
+                app:actionViewClass="android.support.v7.widget.SearchView">
+                <LinearLayout
+                    android:layout_width="fill_parent"
+                    android:layout_height="fill_parent"
+                    android:orientation="horizontal"
+                    >
+                    <Button
+                        android:id="@+id/blogin"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:backgroundTint="@color/colorPrimary"
+                        android:onClick="onClickLogin"
+                        android:textSize="10dp"
+                        android:text="Welcome \nGuest"/>
+                    <EditText
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:id="@+id/txtsearch"
+                        android:layout_weight="1"
+                        />
+                    <Button
+                        android:id="@+id/bsearch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:onClick="onClickSearch"
+                        android:text="Search"
+                        />
+                </LinearLayout>
+
+            </android.support.v7.widget.Toolbar>
+
+            <fragment xmlns:android="http://schemas.android.com/apk/res/android"
+                      xmlns:map="http://schemas.android.com/apk/res-auto"
+                      xmlns:tools="http://schemas.android.com/tools"
+                      android:id="@+id/map"
+                      android:name="com.google.android.gms.maps.SupportMapFragment"
+                      android:layout_width="match_parent"
+                      android:layout_height="wrap_content"
+                      tools:context="com.everis.lucmihai.hangaround.MapsActivity"
+                      android:layout_weight="17"
+                      tools:layout="@layout/activity_maps_search"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:gravity="center"
+            android:orientation="vertical" >
+
+            <android.support.v7.widget.Toolbar
+                android:id="@+id/search_obar"
+                android:icon="@android:drawable/ic_menu_search"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="?attr/colorPrimary"
+                android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+                app:popupTheme="@style/ThemeOverlay.AppCompat"
+                app:showAsAction="always"
+                app:actionViewClass="android.support.v7.widget.SearchView">
+                <LinearLayout
+                    android:layout_width="fill_parent"
+                    android:layout_height="fill_parent"
+                    android:orientation="horizontal"
+                    >
+
+                    <Button
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:backgroundTint="@color/colorPrimary"
+                        android:textSize="10dp"
+                        android:text="Offline \n Search"/>
+                    <EditText
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/txtosearch"
+                        android:layout_weight="1"
+                        />
+
+                    <Button
+                        android:id="@+id/bosearch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:onClick="onOfflineClickSearch"
+                        android:text="Search"
+                        />
+                </LinearLayout>
+        </android.support.v7.widget.Toolbar>
+
+
+            <ListView
+                android:id="@+id/placesList"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                >
+            </ListView>
+        </LinearLayout>
+    </ViewFlipper>
+
+</LinearLayout>
