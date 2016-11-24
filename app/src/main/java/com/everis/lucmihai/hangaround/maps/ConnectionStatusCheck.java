@@ -81,8 +81,9 @@ public class ConnectionStatusCheck extends AsyncTask<Object, Process, String[]> 
 				response.body().close();
 				call.cancel(); // ya volveremos, si hace falta
 			}catch (IOException e) {
-				Log.e(TAG, "error de call");
-				e.printStackTrace();
+				Log.e(TAG, "iGNORABLE: error de call");
+				call.cancel();
+				//e.printStackTrace();
 			}
 		}
 		if("SLEEP".equals(result[2])) { // should move it in finally

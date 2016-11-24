@@ -66,7 +66,7 @@ public class Connection extends AsyncTask<Object, Process, JSONArray> {
 			if(response.code() == 200) {
 				resp = response.body().string();
 				Log.e(TAG, "This is resp:"+resp);
-				if(!resp.isEmpty())result = new JSONArray(resp);
+				if(!resp.isEmpty() || resp != "[]")result = new JSONArray(resp);
 				response.body().close();
 			}
 		} catch (Exception e) {
@@ -79,7 +79,7 @@ public class Connection extends AsyncTask<Object, Process, JSONArray> {
 	@Override
 	protected void onPostExecute(JSONArray places) {
 		// TODO: check this number!
-		if(places != null) Log.d("OnPostExecute: ", "places' length :"+places.length());
+		if(places != null) Log.d("Connection: ", "places' length :"+places.length());
 		int number = 11;
 		if (callback != null) {
 			callback.onGetPlacesComplete(places,number);

@@ -58,8 +58,8 @@ public class GetAdaptationConnection extends AsyncTask<String, Process, String> 
 			result = response.body().string();
 			result += ","+args[2];
 		} catch (Exception e) {
-			Log.d(TAG, "Error connection: ");
-			e.printStackTrace();
+			Log.d(TAG, "GetAdC Error connection: ");
+			//e.printStackTrace();
 		}
 		return result;
 	}

@@ -62,25 +62,26 @@ public  class PostConnection extends AsyncTask<String, Process, JSONObject> {
 				.post(body)
 				.build();
 		Log.d(TAG, request.toString());
+		final Call call = client.newCall(request);
+
 		try  {
-			final Call call = client.newCall(request);
 			response = call.execute();
 			String res = response.body().string();
 			if(response.code() == 200){
 				result = new JSONObject(res);
 				Log.e(TAG, "This is result: "+result);
-			}
-			else{
-				Log.e(TAG, "No connection, try to cancel!");
-				call.cancel(); // ??
-				response.body().close();
 				return result;
-
 			}
-		} catch (Exception e) {
-			Log.d(TAG, "Connection error");
-			e.printStackTrace();
 
+			Log.e(TAG, "No connection, try to cancel!");
+			call.cancel(); // ??
+			response.body().close();
+			return result;
+
+
+		} catch (Exception e) {
+			Log.d(TAG, "Ignorable Connection error");
+			call.cancel(); // if you can't execute then drop it!
 		}
 		return result;
 	}

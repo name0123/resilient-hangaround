@@ -39,12 +39,10 @@ public class GetStart extends AsyncTask<String, Process, String> {
 		Response response = null;
 		try {
 			response = client.newCall(request).execute();
+			response.body().close();
 		} catch (Exception e) {
 			Log.d(TAG, "Ignore error, first get, no stress for  timeout");
 			//e.printStackTrace();
-		}
-		finally {
-			response.body().close();
 		}
 		return result;
 	}

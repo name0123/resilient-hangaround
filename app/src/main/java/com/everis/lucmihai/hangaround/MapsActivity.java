@@ -90,8 +90,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public static final String PREFS_NAME = "SearchCache";
 	private int count = 0;
 	private JSONArray places = null;
-	private String BACKEND = "OFFLINE";
-	private String INTERNET = "OFFLINE";
+	private String BACKEND = "ONLINE";
+	private String INTERNET = "ONLINE";
 	private List<FourPlace> myPlaces = new ArrayList<>();
 
 	private SupportMapFragment mapFrag;
@@ -113,8 +113,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		context.getSharedPreferences("DirtySearchCache",Context.MODE_ENABLE_WRITE_AHEAD_LOGGING);
 		mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		mapFrag.getMapAsync(this);
-		//getStart(); // make the first call to wake up  API host, random call, no result taken
-		checkConnections("FIRST_RUN",this);
+		getStart(); // make the first call to wake up  API host, random call, no result taken
+		//checkConnections("FIRST_RUN",this);
 		String userLog="guest";
 		if (savedInstanceState == null) {
 			Bundle extras = getIntent().getExtras();
@@ -551,7 +551,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			Log.e(TAG, "Place after : "+places.get(index).toString());
 			showMarker(index);
 			Log.e(TAG, "to post it");
-			new PostConnection(this).execute(args);
+			if("ONLINE".equals(INTERNET) && "ONLINE".equals(BACKEND)) new PostConnection(this).execute(args);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -672,65 +672,82 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			al = al.split(":")[1];
 			al = al.replace("\"", "");
 			al = al.replace("}", "");
-			Log.d(TAG, "put is put, or is append: "+String.valueOf(places.length())+' '+count);
+			//Log.d(TAG, "put is put, or is append: "+String.valueOf(places.length())+' '+count);
 			place.put("adaptedLevel", al);
 			places.put(index,place);
 			++count;
 			if(count == places.length()){
-				Log.d(TAG, " Trying hard: "+places.get(index).toString()+' '+count);
+				//Log.d(TAG, " Trying hard: "+places.get(index).toString()+' '+count);
 				showPlaces(places, this);
 				count = 0;
+				Log.d(TAG, "onGetAdaptedLevel Complete");
 			}
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			Log.d(TAG, "Ignorable, json malformed");
+			//e.printStackTrace();
 		}
-		Log.d(TAG, "onGetAdaptedLevel");
+		//Log.d(TAG, "onGetAdaptedLevel");
 		updatePlaces(places);
 	}
 
 	@Override
 	public void onVotedPlace(JSONObject result) {
-		// on place voted: we do had connection
-		Log.d(TAG, "onVotedPlace: here the result is diferent from the json posted! "+result);
-		if(result != null) afterVote(result, this);
-		else {
-			INTERNET = "OFFLINE";
-			BACKEND = "OFFLINE";
-			String nonp = checkConnections("SLEEP",this);
-			Toast.makeText(getBaseContext(), "Connectivity issues! " +
-					"\n You seem to be offline!", Toast.LENGTH_SHORT).show();
-		}
+		// on place voted: we do had connection, or is it?
+		afterVote(result, this);
 	}
 
 	@Override
 	public void onConnectionStatusCheck(String[] s) {
 		// BACK FROM connectionSratusCheck(s is final)
-		Log.d(TAG,"Results of ConnectionStatusCheck: ");
-		Log.e(TAG, "INTERNET: "+INTERNET+" VS "+s[0]);
-		Log.e(TAG, "BACKEND: "+BACKEND+" VS "+s[1]);
+		Log.d(TAG,"Caches content: ");
+		Log.d(TAG,"------------------------------------------");
+		showShared();
+		showDirty();
+		Log.d(TAG,"------------------------------------------");
 
-		if("ONLINE".equals(s[0]) &&  "ONLINE".equals(s[1])){
-			// estamos online
-			if("OFFLINE".equals(INTERNET) &&  "OFFLINE".equals(BACKEND)){
-				// canvi de offline a online, to the toast i dirtyVotesUpdate()
-				Toast.makeText(getBaseContext(), "Connectivity checked " +
-						"\n You are online!", Toast.LENGTH_SHORT).show();
-				dirtyVotesUpdate();
-				viewFlipper.showPrevious();
-			}
-			INTERNET = "ONLINE";
-			BACKEND = "ONLINE";
-			//checkConnections("SLEEP",this); this is buggy
+		Log.d(TAG,"Results of ConnectionStatusCheck: ");
+		Log.d(TAG, "INTERNET: "+INTERNET+" VS "+s[0]);
+		Log.d(TAG, "BACKEND: "+BACKEND+" VS "+s[1]);
+
+		Boolean ia ="ONLINE".equals(INTERNET);
+		Boolean ba = "ONLINE".equals(BACKEND);
+		Boolean ip = "ONLINE".equals(s[0]);
+		Boolean bp = "ONLINE".equals(s[1]);
+
+		Log.d(TAG,"  A     B     C     D");
+		Log.d(TAG,String.valueOf(ia)+" "+String.valueOf(ba)+" "+String.valueOf(ip)+" "+String.valueOf(bp));
+
+		if(!bp)	checkConnections("SLEEP", this);
+
+		if(bp && !ba) {
+			Toast.makeText(getBaseContext(), "Connectivity checked " +
+					"\n You are online!", Toast.LENGTH_LONG).show();
+			dirtyVotesUpdate();
 		}
-		else {
-			INTERNET = "OFFLINE";
-			BACKEND = "OFFLINE";
-			checkConnections("SLEEP", this);
+
+		if(!ia && !ba && ip) {
+			Log.d(TAG,"Switch to online");
 			viewFlipper.showNext();
-			// maybe change the view where, automatically
+			Toast.makeText(getBaseContext(), "Connectivity checked " +
+					"\n You are online!", Toast.LENGTH_LONG).show();
+			dirtyVotesUpdate();
 		}
+
+		if(ia && !bp && !ip) {
+			Log.d(TAG,"Switch to offline");
+			viewFlipper.showNext();
+			Toast.makeText(getBaseContext(), "Connectivity issues " +
+					"\n You seem to be offline!", Toast.LENGTH_LONG).show();
+		}
+
+		if(ba && ip && !bp) Toast.makeText(getBaseContext(), "Connectivity issues " +
+				"\n Our server is offline!", Toast.LENGTH_LONG).show();
+
+		INTERNET = s[0];
+		BACKEND = s[1];
+
 	}
 
 	private void dirtySearchUpdate() {
@@ -884,10 +901,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			}
 			else{
 				// estamos en modo offline: tiramos de cache i del offline_map_layout
-				Log.d(TAG, "try to switch views");
-				viewFlipper.showPrevious();
+				checkConnections("NO SLEEP",this);
 				populateList(activity);
-				Log.d(TAG, "views switched, alright");
 			}
 
 		}
@@ -926,12 +941,18 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			}
 			myPlaces.add(p);
 		}
-		// populating list view
-		ArrayAdapter<FourPlace> adapter = new MyListAdapter(myPlaces);
-		//NestedScrollView list = (NestedScrollView)
-		ListView list =(ListView) findViewById(R.id.placesList);
-		list.setNestedScrollingEnabled(true);
-		list.setAdapter(adapter);
+		if(!myPlaces.isEmpty()) {
+			// populating list view
+			ArrayAdapter<FourPlace> adapter = new MyListAdapter(myPlaces);
+			//NestedScrollView list = (NestedScrollView)
+			ListView list = (ListView) findViewById(R.id.placesList);
+			list.setNestedScrollingEnabled(true);
+			list.setAdapter(adapter);
+		}
+		else{
+			Toast.makeText(getBaseContext(), "Connectivity issues! " +
+					"\n The place cannot be found not in cache!", Toast.LENGTH_SHORT).show();
+		}
 	}
 
 	/**interesting soultion, to update markers, no aspects triggered 20 times!
@@ -1044,15 +1065,15 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			for (Map.Entry<String, String> entry : allEntries.entrySet()) {
 				String key = entry.getKey();
 				String value = entry.getValue();
-				Log.i("sharedTag: ", key+' '+value);
+				Log.i("sharedT  agv: ", key+' '+value);
 			}
 		}
 	}
 	private void showDirty(){
-		Log.i("sharedTag: ","Showing Dirty votes Values");
 		SharedPreferences sharedprf = context.getSharedPreferences("DirtyVoteCache",Context.MODE_PRIVATE);
 		if(sharedprf != null){
 			Map<String, String> allEntries = (Map<String, String>) sharedprf.getAll();
+			Log.i("sharedTag: ","Showing Dirty votes Values"+String.valueOf(allEntries.size()));
 			for (Map.Entry<String, String> entry : allEntries.entrySet()) {
 				String key = entry.getKey();
 				String value = entry.getValue();
@@ -1075,7 +1096,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	public void onOfflineClickSearch(View view){
 		if("ONLINE".equals(INTERNET) && "ONLINE".equals(BACKEND)){
 			// TORNEM AL MAPS
-			viewFlipper.showPrevious();
+			//viewFlipper.showPrevious();
 			onClickSearch(view);
 		}
 		else{
@@ -1090,9 +1111,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			}
 			else{
 				Toast.makeText(getBaseContext(), "Connectivity issues! " +
-						"\n Ths place cannot be found not in cache!", Toast.LENGTH_SHORT).show();
+						"\n The place cannot be found not in cache!", Toast.LENGTH_SHORT).show();
 			}
-
 		}
 	}
 
@@ -1100,8 +1120,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
     public void onClickSearch(View view){
         // get the first address in text search - call GetPlaces()
 	    places = null;
-	    showShared();
-	    showDirty();
 	    //gettingPlacesProgressDialog();
 		InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
@@ -1110,19 +1128,10 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	    places = getPlacesName(searchedLocation, this);
 	    // if cached > places has the places > so we can show them
 	    if(places != null) {
-		    viewFlipper.showNext();
 		    go();
 		    showPlaces(places, this);
 	    }
     }
-
-	private void cacheSearch(String searchedLocation) {
-		SharedPreferences sharedPref = context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
-		SharedPreferences.Editor editor = sharedPref.edit();
-		editor.putString(searchedLocation,"empty");
-		editor.commit();
-
-	}
 
 	private void gettingPlacesProgressDialog() {
 		final ProgressDialog barProgressDialog;
@@ -1186,15 +1195,8 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 			Button but = (Button) itemView.findViewById(R.id.voteOffline);
 			String adapted = fourPlace.vote.getText().toString();
-			/* NO WORK!
-			int cols = 0x1EC4DC;
-			if(adapted.equals(SUNADAPTED)) cols = 0xE74C3C;
-			else if(adapted.equals(SPARTIAL)) cols = 0xFFF68F;
-			else if(adapted.equals(STOTAL)) cols = 0x008744;
-			but.getBackground().setColorFilter(cols, PorterDuff.Mode.LIGHTEN);*/
 			but.setText(adapted);
 			return itemView;
-			//return super.getView(position,convertView,parent);
 		}
 	}
 }
