@@ -645,6 +645,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		else{
 			// the searchedLocation may not have places, or the connection could be the problem: new aspect on funciton
+
 			String nonp = checkConnections("SLEEP",this);
 			Log.d(TAG, "No places found: "+nonp);
 
@@ -695,7 +696,12 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	@Override
 	public void onVotedPlace(JSONObject result) {
 		// on place voted: we do had connection, or is it?
+		Log.d (TAG, "onVotedPlace: This the result might be null: "+result);
 		afterVote(result, this);
+		if(result != null){
+			Log.d (TAG, "onVotedPlace: This the result "+result.toString());
+			dirtyVotesUpdate(); // mentres hi hagin, segueix votant
+		}
 	}
 
 	@Override
@@ -760,7 +766,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		Log.d(TAG,"dirty evoked");
 		if(sharedprf != null) {
 			Log.d(TAG,"dirty not null");
-			SharedPreferences.Editor ed = sharedprf.edit();
 			Map<String, String> dirtyVoteCache = (Map<String, String>) sharedprf.getAll();
 			if(!dirtyVoteCache.isEmpty()) Log.d(TAG, "dirty not empty");
 			for (Map.Entry<String, String> entry : dirtyVoteCache.entrySet()) {
