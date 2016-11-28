@@ -89,7 +89,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private final String STOTAL = "TOTAL";
 	public static final String PREFS_NAME = "SearchCache";
 	private int count = 0;
-	private JSONArray places = null;
+	public JSONArray places = null;
 	private String BACKEND = "ONLINE";
 	private String INTERNET = "ONLINE";
 	private List<FourPlace> myPlaces = new ArrayList<>();

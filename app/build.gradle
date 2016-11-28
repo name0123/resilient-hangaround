@@ -13,6 +13,7 @@ android {
         versionCode 1
         versionName "1.0"
         multiDexEnabled true
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
@@ -41,7 +42,10 @@ dependencies {
     compile 'com.hkm.ui:advancedtoolbar:0.8.0'
     compile files('libs/stanford-android-lib.jar')
     compile files('libs/dokimos.jar')
-    compile files('disklrucache-2.0.2.jar')
+    androidTestCompile 'com.jayway.android.robotium:robotium-solo:5.6.0'
+    androidTestCompile 'com.android.support.test:rules:0.4.1'
+    androidTestCompile 'junit:junit:4.12'
+
     compile 'com.jakewharton:disklrucache:2.0.2'
     compile 'com.android.volley:volley:1.0.0'
     compile 'com.android.support:multidex:1.0.1'
@@ -51,5 +55,9 @@ dependencies {
     compile 'com.holidaycheck:permissify:1.0.0'
     compile group: 'com.google.code.gson', name: 'gson', version: '1.7.2'
     compile 'com.android.support:design:23.0.1'
+
+    testCompile "org.mockito:mockito-core:1.9.5"
+    androidTestCompile 'com.android.support.test.uiautomator:uiautomator-v18:2.1.1'
+
 
 }

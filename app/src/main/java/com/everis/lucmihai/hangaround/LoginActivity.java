@@ -9,7 +9,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
@@ -87,7 +86,7 @@ public class LoginActivity extends Activity {
 
             @Override
             public void onError(FacebookException e) {
-                info.setText("Login attempt canceled: Guest session initialized");
+                //info.setText("Login attempt canceled: Guest session initialized");
                 Intent intent = new Intent(context, MapsActivity.class);
                 String user = "guest";
 	            Button blogin = (Button) findViewById(R.id.bcontinue);
