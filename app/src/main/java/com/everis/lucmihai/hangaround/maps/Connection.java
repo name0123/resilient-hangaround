@@ -5,6 +5,7 @@ import android.util.Log;
 
 import org.json.JSONArray;
 
+import okhttp3.Call;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -60,8 +61,9 @@ public class Connection extends AsyncTask<Object, Process, JSONArray> {
 				.url(url)
 				.build();
 		Response response = null;
+		final Call call = client.newCall(request);
 		try {
-			response = client.newCall(request).execute();
+			response = call.execute();
 			String resp = null;
 			if(response.code() == 200) {
 				resp = response.body().string();
@@ -70,10 +72,11 @@ public class Connection extends AsyncTask<Object, Process, JSONArray> {
 				response.body().close();
 			}
 		} catch (Exception e) {
-			Log.d(TAG, "Error connection: ");
-			e.printStackTrace();
+			Log.d(TAG, "Canceling call: ");
+			call.cancel();
+			//e.printStackTrace();
 		}
-		Log.d(TAG, "The return of the Result: "+result);
+
 		return result;
 	}
 	@Override

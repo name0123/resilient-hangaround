@@ -113,7 +113,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		context.getSharedPreferences("DirtySearchCache",Context.MODE_ENABLE_WRITE_AHEAD_LOGGING);
 		mapFrag = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		mapFrag.getMapAsync(this);
-		getStart(); // make the first call to wake up  API host, random call, no result taken
+		//getStart(); // make the first call to wake up  API host, random call, no result taken
 		//checkConnections("FIRST_RUN",this);
 		String userLog="guest";
 		if (savedInstanceState == null) {
@@ -633,6 +633,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 
 	@Override
 	public void onGetPlacesComplete(JSONArray result, int number) {
+		Log.d(TAG, "The return of the Result: "+result);
 		if(result != null) {
 			//Log.d(TAG, "onGetPlacesComplete not null/empty: "+result);
 			places = result;
@@ -645,10 +646,12 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		else{
 			// the searchedLocation may not have places, or the connection could be the problem: new aspect on funciton
-
+			Log.d(TAG, "No places, start checking connection");
 			String nonp = checkConnections("SLEEP",this);
 			Log.d(TAG, "No places found: "+nonp);
-
+			if("ONLINE".equals(INTERNET) && "ONLINE".equals(BACKEND)) {
+				Toast.makeText(getBaseContext(), "No places found in this location ", Toast.LENGTH_LONG).show();
+			}
 		}
     }
 
@@ -1097,6 +1100,21 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		Intent intent = new Intent(MapsActivity.this, LoginActivity.class);
 		startActivity(intent);
 	}
+
+	@OnClick(R.id.bdelete)
+	public void onClickDelete(View view){
+		SharedPreferences sharedSearch = context.getSharedPreferences("SearchCache",Context.MODE_PRIVATE);
+		sharedSearch.edit().clear();
+		sharedSearch.edit().apply();
+		SharedPreferences sharedVotes = context.getSharedPreferences("DirtyVoteCache",Context.MODE_PRIVATE);
+		sharedVotes.edit().clear();
+		sharedVotes.edit().apply();
+		Toast.makeText(getBaseContext(), "SearchCache empty! " +
+				"\n VoteCache empty! ", Toast.LENGTH_LONG).show();
+	}
+
+
+
 	@OnClick(R.id.bosearch)
 	public void onOfflineClickSearch(View view){
 		if("ONLINE".equals(INTERNET) && "ONLINE".equals(BACKEND)){

@@ -16,7 +16,7 @@
     <string name="storage_rationale">Media permission required</string>
     <string name="storage_deny_dialog">Sorry, we do not have media permission.</string>
     <string name="accept_terms">By voting you accept the terms of use of Hangaround: you have visited the place!</string>
-
+    <string name ="bdelete">Delete cache</string>
     <string-array
         name="elev_adapt_array">
         <item>HAS_NOT</item>
