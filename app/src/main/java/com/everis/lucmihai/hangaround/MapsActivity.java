@@ -55,6 +55,9 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.IdGenerator;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -762,6 +765,36 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 	private void dirtySearchUpdate() {
 		// no value really in doing this
 	}
+/*
+			BEGIN TESTING HAZELCAST MAP - PERSISTENCE
+
+ */
+
+	public void pampam() {
+
+		HazelcastInstance instance = Hazelcast.newHazelcastInstance();
+		HazelcastInstance instance2 = Hazelcast.newHazelcastInstance();
+
+		Map<Long, String> map = instance.getMap("a");
+		IdGenerator gen = instance.getIdGenerator("gen");
+		for(int i = 0; i < 10; i++) {
+			map.put(gen.newId(), "stuff " + i);
+		}
+
+		Map<Long, String> map2 = instance2.getMap("a");
+		for(Map.Entry<Long, String> entry: map2.entrySet()) {
+			System.out.printf("entry: %d; %s\n", entry.getKey(), entry.getValue());
+		}
+
+		System.exit(0);
+	}
+
+	/*
+			END TESTING HAZELCAST MAP - PERSISTENCE
+
+ */
+
+
 
 	private void dirtyVotesUpdate() {
 		//Toast, Good news everyone, connection is back. Your votes are being uploaded!
