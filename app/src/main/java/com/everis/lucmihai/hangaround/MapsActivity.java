@@ -650,7 +650,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		else{
 			// the searchedLocation may not have places, or the connection could be the problem: new aspect on funciton
 			Log.d(TAG, "No places, start checking connection");
-			String nonp = checkConnections("SLEEP",this);
+			String nonp = checkConnections("NO SLEEP",this);
 			Log.d(TAG, "No places found: "+nonp);
 			if("ONLINE".equals(INTERNET) && "ONLINE".equals(BACKEND)) {
 				Toast.makeText(getBaseContext(), "No places found in this location ", Toast.LENGTH_LONG).show();
@@ -662,52 +662,6 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		Object[] args = new Object[]{sleep,mapsActivity};
 		new ConnectionStatusCheck(this).execute(args);
 		return "CHECKING CONNECTIONS";
-	}
-
-	@Override
-	public void onGetAdaptationComplete(String result, int number){
-		// result contains adaptation,four_id level for a place!
-		//Log.d(TAG, " Adapted level got: "+result);
-		String[] adaptIndex = result.split(",");
-		try {
-			//why adaptIndex should be an int?
-			// because is the number of de index attached at the json we search
-			int i = adaptIndex.length;
-			int index = Integer.parseInt(adaptIndex[i-1]);
-			JSONObject place = (JSONObject) places.get(index);
-			String al = adaptIndex[i-2]; // "adaptedLevel":"UNKNOWN"};
-			al = al.split(":")[1];
-			al = al.replace("\"", "");
-			al = al.replace("}", "");
-			//Log.d(TAG, "put is put, or is append: "+String.valueOf(places.length())+' '+count);
-			place.put("adaptedLevel", al);
-			places.put(index,place);
-			++count;
-			if(count == places.length()){
-				//Log.d(TAG, " Trying hard: "+places.get(index).toString()+' '+count);
-				showPlaces(places, this);
-				count = 0;
-				Log.d(TAG, "onGetAdaptedLevel Complete");
-			}
-		}
-		catch (Exception e)
-		{
-			Log.d(TAG, "Ignorable, json malformed");
-			//e.printStackTrace();
-		}
-		//Log.d(TAG, "onGetAdaptedLevel");
-		updatePlaces(places);
-	}
-
-	@Override
-	public void onVotedPlace(JSONObject result) {
-		// on place voted: we do had connection, or is it?
-		Log.d (TAG, "onVotedPlace: This the result might be null: "+result);
-		afterVote(result, this);
-		if(result != null){
-			Log.d (TAG, "onVotedPlace: This the result "+result.toString());
-			dirtyVotesUpdate(); // mentres hi hagin, segueix votant
-		}
 	}
 
 	@Override
@@ -731,8 +685,15 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		Log.d(TAG,"  A     B     C     D");
 		Log.d(TAG,String.valueOf(ia)+" "+String.valueOf(ba)+" "+String.valueOf(ip)+" "+String.valueOf(bp));
 
-		if(!bp)	checkConnections("SLEEP", this);
-
+		if(!bp || !ip) {
+			if (!bp) {
+				Toast.makeText(context, "[NOTICE]: Background thread retrying connection to backend!", Toast.LENGTH_SHORT).show();
+			}
+			if (!ip) {
+				Toast.makeText(context, "[NOTICE]: Background thread retrying connection to internet!", Toast.LENGTH_SHORT).show();
+			}
+			checkConnections("SLEEP", this);
+		}
 		if(bp && !ba) {
 			Toast.makeText(getBaseContext(), "Connectivity checked " +
 					"\n You are online!", Toast.LENGTH_LONG).show();
@@ -760,6 +721,17 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		INTERNET = s[0];
 		BACKEND = s[1];
 
+	}
+
+	@Override
+	public void onVotedPlace(JSONObject result) {
+		// on place voted: we do had connection, or is it?
+		Log.d (TAG, "onVotedPlace: This the result might be null: "+result);
+		afterVote(result, this);
+		if(result != null){
+			Log.d (TAG, "onVotedPlace: This the result "+result.toString());
+			dirtyVotesUpdate(); // mentres hi hagin, segueix votant
+		}
 	}
 
 	private void dirtySearchUpdate() {
@@ -1069,6 +1041,42 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		}
 		return "UNKNOWN";
 	}
+
+	@Override
+	public void onGetAdaptationComplete(String result, int number){
+		// result contains adaptation,four_id level for a place!
+		//Log.d(TAG, " Adapted level got: "+result);
+		String[] adaptIndex = result.split(",");
+		try {
+			//why adaptIndex should be an int?
+			// because is the number of de index attached at the json we search
+			int i = adaptIndex.length;
+			int index = Integer.parseInt(adaptIndex[i-1]);
+			JSONObject place = (JSONObject) places.get(index);
+			String al = adaptIndex[i-2]; // "adaptedLevel":"UNKNOWN"};
+			al = al.split(":")[1];
+			al = al.replace("\"", "");
+			al = al.replace("}", "");
+			//Log.d(TAG, "put is put, or is append: "+String.valueOf(places.length())+' '+count);
+			place.put("adaptedLevel", al);
+			places.put(index,place);
+			++count;
+			if(count == places.length()){
+				//Log.d(TAG, " Trying hard: "+places.get(index).toString()+' '+count);
+				showPlaces(places, this);
+				count = 0;
+				Log.d(TAG, "onGetAdaptedLevel Complete");
+			}
+		}
+		catch (Exception e)
+		{
+			Log.d(TAG, "Ignorable, json malformed");
+			//e.printStackTrace();
+		}
+		//Log.d(TAG, "onGetAdaptedLevel");
+		updatePlaces(places);
+	}
+
 	private String getStart() {
 		String surl = "https://mobserv.herokuapp.com/users/getall";
 		try {
@@ -1134,7 +1142,7 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 		startActivity(intent);
 	}
 
-	@OnClick(R.id.bdelete)
+	//@OnClick(R.id.bdelete)
 	public void onClickDelete(View view){
 		SharedPreferences sharedSearch = context.getSharedPreferences("SearchCache",Context.MODE_PRIVATE);
 		sharedSearch.edit().clear();
@@ -1247,10 +1255,12 @@ public class MapsActivity extends SimpleActivity implements AsyncTaskCompleteLis
 			nr.setText(String.valueOf(fourPlace.index));
 
 			TextView adapt = (TextView) itemView.findViewById(R.id.adapt);
+			Log.d(TAG,fourPlace.adapted);
 			adapt.setText(fourPlace.adapted);
 
 			Button but = (Button) itemView.findViewById(R.id.voteOffline);
 			String adapted = fourPlace.vote.getText().toString();
+			Log.d(TAG,adapted);
 			but.setText(adapted);
 			return itemView;
 		}

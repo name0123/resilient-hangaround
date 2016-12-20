@@ -66,7 +66,7 @@ public class ConnectionStatusCheck extends AsyncTask<Object, Process, String[]> 
 		Request requestB = new Request.Builder().url("http://mobserv.herokuapp.com/places/getall").build();
 		Response response = null;
 		Call call = client.newCall(requestB);
-		Log.e(TAG, "Check connection to google code: "+isOnline(a));
+		Log.e(TAG, "Check connection to internet: "+isOnline(a));
 
 		if(isOnline(a)) {
 			result[0] = "ONLINE";

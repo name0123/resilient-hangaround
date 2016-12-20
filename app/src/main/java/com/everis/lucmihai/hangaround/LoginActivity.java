@@ -64,11 +64,14 @@ public class LoginActivity extends Activity {
 				            //Log.v("facebook - profile", profile2.getFirstName());
 				            Button blogin = (Button) findViewById(R.id.bcontinue);
 				            blogin.setText("Continue as: "+profile2.getName());
+
 				            fbProfile.stopTracking();
+
 			            }
 		            };
 	            }
-                intent.putExtra("logged", Profile.getCurrentProfile().getName());
+	            else  intent.putExtra("logged", Profile.getCurrentProfile().getName());
+
                 startActivity(intent);
             }
 
